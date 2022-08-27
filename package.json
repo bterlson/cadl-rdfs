@@ -1,0 +1,15 @@
+{
+  "name": "cadl-rdf",
+  "main": "dist/index.js",
+  "cadlMain": "lib/rdf.cadl",
+  "dependencies": {
+    "@cadl-lang/compiler": "latest",
+    "n3": "^1.16.2"
+  },
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/n3": "^1.10.4",
+    "typescript": "^4.8.2"
+  }
+}

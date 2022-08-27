@@ -1,0 +1,31 @@
+import "cadl-rdf";
+
+using CadlRdf;
+
+@rdfns("ex", "http://example.org/")
+namespace Resources;
+
+@doc("a person")
+model Person {
+  name: string;
+  age: int8;
+  vehicles: Vehicle[];
+}
+
+@doc("any kind of vehicle")
+model Vehicle {
+  owner: Person;
+}
+
+@doc("a vehicle that moves people")
+model Car extends Vehicle {
+
+  @doc("no superfluous vowels here")
+  color: "red" | "blue";
+}
+
+@doc("a truck for transporting cargo")
+model Truck extends Vehicle {
+  @doc("how many cubic feet of space")
+  cargoSpace: int32;
+}
