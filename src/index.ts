@@ -5,23 +5,23 @@ const nn = DataFactory.namedNode;
 import {
   createDecoratorDefinition,
   DecoratorContext,
-  ModelType,
-  NamespaceType,
+  Model,
+  Namespace,
   Program,
   navigateProgram,
   Type,
-  ModelTypeProperty,
+  ModelProperty,
   getIntrinsicModelName,
   getDoc,
   isArrayModelType,
+  createCadlLibrary,
 } from "@cadl-lang/compiler";
-import { getIntrinsicType } from "@azure-tools/adl";
 
-/*
-notes for updating to next release:
-* Replace symbol.for with createStateSymbol
-* Drop 'Type' suffix
-*/
+const lib = createCadlLibrary({
+  name: "cadl-rdf",
+  diagnostics: {}, // no diagnostics yet
+  emitter: {} // no emitter options
+});
 
 export function $onEmit(program: Program) {
   const emitter = createRdfEmitter(program);
@@ -123,13 +123,13 @@ function createRdfEmitter(program: Program) {
       }
 
       program.host.writeFile(
-        path.join(program.compilerOptions.outputPath, "models.ttl"),
+        path.join(program.compilerOptions.outputPath!, "models.ttl"),
         result
       );
     });
   }
 
-  function nameForModel(model: ModelType) {
+  function nameForModel(model: Model) {
     const intrinsic = getIntrinsicModelName(program, model);
 
     if (!intrinsic) {
@@ -185,13 +185,13 @@ function createRdfEmitter(program: Program) {
     }
   }
 
-  function nameForProperty(prop: ModelTypeProperty) {
+  function nameForProperty(prop: ModelProperty) {
     let ns = getNsForModel(prop.model!);
     return ns.prefix + ":" + prop.name;
   }
 
-  function getNsForModel(type: ModelType) {
-    let current: ModelType | NamespaceType | undefined = type;
+  function getNsForModel(type: Model) {
+    let current: Model | Namespace | undefined = type;
     let nsData: RdfnsData | undefined;
 
     while (current && !nsData) {
@@ -217,7 +217,7 @@ interface RdfnsData {
   namespace: string;
 }
 
-const rdfnsSymbol = Symbol.for("rdfns");
+const rdfnsSymbol = lib.createStateSymbol("rdfns");
 const rdfnsDef = createDecoratorDefinition({
   name: "@rdfns",
   target: ["Namespace", "Model"],
@@ -230,7 +230,7 @@ function getRdfnsState(program: Program): Map<Type, RdfnsData> {
 
 export function $rdfns(
   context: DecoratorContext,
-  target: NamespaceType | ModelType,
+  target: Namespace | Model,
   prefix: string,
   namespace: string
 ) {
