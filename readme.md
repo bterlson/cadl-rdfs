@@ -40,3 +40,27 @@ ex:name rdf:type rdf:Property;
 ```
 
 See the sample directory for a larger example.
+
+
+## Packaging
+
+Until this package is published, it can be consumed by cloning this repository and running:
+
+```
+npm install
+npm pack
+```
+
+This will produce a tarball you can pass to `npm install` to add this emitter to other projects.
+
+## Contributing
+
+PRs and other contributions are very welcome!
+
+### Building the project
+
+Run `npm run build` from the root directory.
+
+### Running tests
+
+Tests are a work in progress.
