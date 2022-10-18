@@ -1,4 +1,4 @@
-import { Writer, DataFactory } from "n3";
+import { Writer, DataFactory, Quad, BaseQuad, Variable } from "n3";
 import path from "path";
 const nn = DataFactory.namedNode;
 
@@ -52,9 +52,11 @@ function createRdfEmitter(program: Program) {
         }
         const nameNode = nn(nameForModel(m));
 
+
         // Class
         // TODO: Dont know how to add 'a' relation
         writer.addQuad(nameNode, DataFactory.namedNode('a'), nn("owl:Class"));
+
 
         //Subclass
         if (m.baseModel) {
@@ -75,46 +77,45 @@ function createRdfEmitter(program: Program) {
           );
         }
 
-        for (const prop of m.properties.values()) {
+        
+        // Data properties
+        for (const prop of m.properties.values()) 
+        {
           const propNameNode = nn(nameForProperty(prop));
           writer.addQuad(propNameNode, DataFactory.namedNode('a'), nn("owl:DataTypeProperty"));
           writer.addQuad(propNameNode, nn("rdfs:domain"), nameNode);
 
-          if (prop.type.kind === "Model") {
-            if (isArrayModelType(program, prop.type)) {
-              // after years of research I have been unable to determine how
-              // to create a subtype of seq with a particular element type
-              writer.addQuad(propNameNode, nn("rdfs:range"), nn("rdf:Seq"));
-            } else {
-              writer.addQuad(
+          if (prop.type.kind === "Model") 
+          {
+              writer.addQuad
+              (
                 propNameNode,
                 nn("rdfs:range"),
                 nn(nameForModel(prop.type))
               );
-            }
-          } 
+          }
+
           else if (prop.type.kind === "Union") 
           {
-            for (const variant of prop.type.variants.values()) {
-              if (variant.type.kind === "Model") {
-                writer.addQuad(
-                  propNameNode,
-                  nn("rdfs:range"),
-                  nn(nameForModel(variant.type))
-                );
-              } else if (
-                variant.type.kind === "String" ||
-                variant.type.kind === "Number"
-              ) 
+            var arr = new Array();
+            for (const variant of prop.type.variants.values()) 
+            {
+
+              if (variant.type.kind === "Model") 
               {
-                writer.addQuad(
-                  propNameNode,
-                  nn("rdfs:range"),
-                  DataFactory.literal(variant.type.value)
-                );
+                arr.push(nameForModel(variant.type));
+              } 
+              else if (variant.type.kind === "String" || variant.type.kind === "Number") 
+              {
+                arr.push(DataFactory.literal(variant.type.value));
               }
-              // todo: support booleans and other exotic union types
             }
+
+            var arr2 = new Array();
+            arr2.push ( (nn("rdfs:range"), DataFactory.namedNode('a'), nn("rdfs:Datatype")));
+            arr2.push ( (nn("rdfs:range"), nn("owl:oneOf"), arr));
+            writer.addQuad(propNameNode, nn("rdfs:range"), arr2);
+
           }
 
           const doc = getDoc(program, prop);
