@@ -38,6 +38,7 @@ function createRdfEmitter(program: Program) {
   };
 
   const writer = new Writer({ prefixes });
+  
 
   return {
     emit,
@@ -50,27 +51,33 @@ function createRdfEmitter(program: Program) {
           return;
         }
         const nameNode = nn(nameForModel(m));
-        writer.addQuad(nameNode, nn("rdf:type"), nn("rdfs:Class"));
 
+        // Class
+        // TODO: Dont know how to add 'a' relation
+        writer.addQuad(nameNode, DataFactory.namedNode('a'), nn("owl:Class"));
+
+        //Subclass
         if (m.baseModel) {
           writer.addQuad(
             nameNode,
-            nn("rdfs:isSubclassOf"),
+            nn("rdfs:subclassOf"),
             nn(nameForModel(m.baseModel))
           );
         }
 
+        // Comments
         const doc = getDoc(program, m);
         if (doc) {
           writer.addQuad(
             nameNode,
-            nn("rdfs:comment"),
+            nn("skos:note"),
             DataFactory.literal(doc)
           );
         }
+
         for (const prop of m.properties.values()) {
           const propNameNode = nn(nameForProperty(prop));
-          writer.addQuad(propNameNode, nn("rdf:type"), nn("rdf:Property"));
+          writer.addQuad(propNameNode, DataFactory.namedNode('a'), nn("owl:DataTypeProperty"));
           writer.addQuad(propNameNode, nn("rdfs:domain"), nameNode);
 
           if (prop.type.kind === "Model") {
@@ -85,21 +92,24 @@ function createRdfEmitter(program: Program) {
                 nn(nameForModel(prop.type))
               );
             }
-          } else if (prop.type.kind === "Union") {
+          } 
+          else if (prop.type.kind === "Union") 
+          {
             for (const variant of prop.type.variants.values()) {
               if (variant.type.kind === "Model") {
                 writer.addQuad(
                   propNameNode,
-                  nn("rdfs:rangeIncludes"),
+                  nn("rdfs:range"),
                   nn(nameForModel(variant.type))
                 );
               } else if (
                 variant.type.kind === "String" ||
                 variant.type.kind === "Number"
-              ) {
+              ) 
+              {
                 writer.addQuad(
                   propNameNode,
-                  nn("rdfs:rangeIncludes"),
+                  nn("rdfs:range"),
                   DataFactory.literal(variant.type.value)
                 );
               }
@@ -111,7 +121,7 @@ function createRdfEmitter(program: Program) {
           if (doc) {
             writer.addQuad(
               propNameNode,
-              nn("rdfs:comment"),
+              nn("skos:note"),
               DataFactory.literal(doc)
             );
           }
