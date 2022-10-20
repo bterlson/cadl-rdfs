@@ -1,4 +1,4 @@
-import { Writer, DataFactory, Quad, BaseQuad, Variable } from "n3";
+import { Writer, DataFactory, Quad, BaseQuad, Variable, Literal } from "n3";
 import path from "path";
 const nn = DataFactory.namedNode;
 
@@ -52,16 +52,13 @@ function createRdfEmitter(program: Program) {
         }
         const nameNode = nn(nameForModel(m));
 
-
         // Class
-        // TODO: Dont know how to add 'a' relation
-        writer.addQuad(nameNode, DataFactory.namedNode('a'), nn("owl:Class"));
-
+        writer.addQuad(nameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:Class"));
 
         //Subclass
         if (m.baseModel) {
           writer.addQuad(
-            nameNode,
+            nameNode, 
             nn("rdfs:subclassOf"),
             nn(nameForModel(m.baseModel))
           );
@@ -82,7 +79,7 @@ function createRdfEmitter(program: Program) {
         for (const prop of m.properties.values()) 
         {
           const propNameNode = nn(nameForProperty(prop));
-          writer.addQuad(propNameNode, DataFactory.namedNode('a'), nn("owl:DataTypeProperty"));
+          writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DataTypeProperty"));
           writer.addQuad(propNameNode, nn("rdfs:domain"), nameNode);
 
           if (prop.type.kind === "Model") 
@@ -97,24 +94,30 @@ function createRdfEmitter(program: Program) {
 
           else if (prop.type.kind === "Union") 
           {
-            var arr = new Array();
+
+            const arr= [];
+
             for (const variant of prop.type.variants.values()) 
             {
 
               if (variant.type.kind === "Model") 
               {
                 arr.push(nameForModel(variant.type));
-              } 
-              else if (variant.type.kind === "String" || variant.type.kind === "Number") 
+              }
+              if (variant.type.kind === "String" || variant.type.kind === "Number") 
               {
-                arr.push(DataFactory.literal(variant.type.value));
+                arr.push(variant.type.value);
               }
             }
-
-            var arr2 = new Array();
-            arr2.push ( (nn("rdfs:range"), DataFactory.namedNode('a'), nn("rdfs:Datatype")));
-            arr2.push ( (nn("rdfs:range"), nn("owl:oneOf"), arr));
-            writer.addQuad(propNameNode, nn("rdfs:range"), arr2);
+    
+            writer.addQuad(propNameNode, nn("rdfs:range"), writer.blank([{
+              predicate: nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+              object:    nn("rdfs:Datatype"),
+            },{
+              predicate: nn("owl:oneOf"),
+              //TODO: owl:oneOf "red,blue" -> owl:oneOf ("red" "blue" )
+              object:  DataFactory.literal(arr.toString()),
+            }]));
 
           }
 
@@ -224,6 +227,8 @@ function createRdfEmitter(program: Program) {
     return nsData;
   }
 }
+
+
 
 interface RdfnsData {
   prefix: string;
