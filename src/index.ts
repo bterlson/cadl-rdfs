@@ -1,4 +1,4 @@
-import { Writer, DataFactory } from "n3";
+import { Writer, DataFactory, Quad, BaseQuad, Variable, Literal } from "n3";
 import path from "path";
 const nn = DataFactory.namedNode;
 
@@ -33,9 +33,12 @@ function createRdfEmitter(program: Program) {
     rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
     rdfs: "http://www.w3.org/2000/01/rdf-schema#",
     xsd: "http://www.w3.org/2001/XMLSchema#",
+    skos: "http://www.w3.org/2004/02/skos/core#",
+    owl: "http://www.w3.org/2002/07/owl#http"
   };
 
   const writer = new Writer({ prefixes });
+  
 
   return {
     emit,
@@ -48,68 +51,70 @@ function createRdfEmitter(program: Program) {
           return;
         }
         const nameNode = nn(nameForModel(m));
-        writer.addQuad(nameNode, nn("rdf:type"), nn("rdfs:Class"));
 
+        // Class
+        writer.addQuad(nameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:Class"));
+
+        //Subclass
         if (m.baseModel) {
           writer.addQuad(
-            nameNode,
-            nn("rdfs:isSubclassOf"),
+            nameNode, 
+            nn("rdfs:subclassOf"),
             nn(nameForModel(m.baseModel))
           );
         }
 
+        // Comments
         const doc = getDoc(program, m);
         if (doc) {
           writer.addQuad(
             nameNode,
-            nn("rdfs:comment"),
+            nn("skos:note"),
             DataFactory.literal(doc)
           );
         }
-        for (const prop of m.properties.values()) {
+        
+        // Data properties
+        for (const prop of m.properties.values()) 
+        {
           const propNameNode = nn(nameForProperty(prop));
-          writer.addQuad(propNameNode, nn("rdf:type"), nn("rdf:Property"));
+          writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DataTypeProperty"));
           writer.addQuad(propNameNode, nn("rdfs:domain"), nameNode);
 
-          if (prop.type.kind === "Model") {
-            if (isArrayModelType(program, prop.type)) {
-              // after years of research I have been unable to determine how
-              // to create a subtype of seq with a particular element type
-              writer.addQuad(propNameNode, nn("rdfs:range"), nn("rdf:Seq"));
-            } else {
-              writer.addQuad(
+          if (prop.type.kind === "Model") 
+          {
+              writer.addQuad
+              (
                 propNameNode,
                 nn("rdfs:range"),
                 nn(nameForModel(prop.type))
               );
-            }
-          } else if (prop.type.kind === "Union") {
-            for (const variant of prop.type.variants.values()) {
-              if (variant.type.kind === "Model") {
-                writer.addQuad(
-                  propNameNode,
-                  nn("rdfs:rangeIncludes"),
-                  nn(nameForModel(variant.type))
-                );
-              } else if (
-                variant.type.kind === "String" ||
-                variant.type.kind === "Number"
-              ) {
-                writer.addQuad(
-                  propNameNode,
-                  nn("rdfs:rangeIncludes"),
-                  DataFactory.literal(variant.type.value)
-                );
+          }
+
+          else if (prop.type.kind === "Union") 
+          {
+
+            const arr= [];
+
+            for (const variant of prop.type.variants.values()) 
+            {
+              if (variant.type.kind === "Model") 
+              {
+                arr.push(DataFactory.literal(nameForModel(variant.type)));
               }
-              // todo: support booleans and other exotic union types
+              if (variant.type.kind === "String" || variant.type.kind === "Number") 
+              {
+                arr.push(DataFactory.literal(variant.type.value));
+              }
             }
+            writer.addQuad(propNameNode, nn("owl:oneOf"),writer.list(arr));
           }
 
           const doc = getDoc(program, prop);
           if (doc) {
             writer.addQuad(
               propNameNode,
-              nn("rdfs:comment"),
+              nn("skos:note"),
               DataFactory.literal(doc)
             );
           }
@@ -211,6 +216,8 @@ function createRdfEmitter(program: Program) {
     return nsData;
   }
 }
+
+
 
 interface RdfnsData {
   prefix: string;
