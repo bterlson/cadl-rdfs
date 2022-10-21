@@ -61,7 +61,6 @@ PRs and other contributions are very welcome!
 
 Run these instructions from the root directory (where sample.cadl file is a CADL file you want to emit to RDF):
 ```
-module load ossjs/node/16.13.2
 npm install
 npm run build
 npx cadl compile sample.cadl --emit cadl-rdf
