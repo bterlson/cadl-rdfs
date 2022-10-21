@@ -73,7 +73,6 @@ function createRdfEmitter(program: Program) {
             DataFactory.literal(doc)
           );
         }
-
         
         // Data properties
         for (const prop of m.properties.values()) 
@@ -99,26 +98,16 @@ function createRdfEmitter(program: Program) {
 
             for (const variant of prop.type.variants.values()) 
             {
-
               if (variant.type.kind === "Model") 
               {
-                arr.push(nameForModel(variant.type));
+                arr.push(DataFactory.literal(nameForModel(variant.type)));
               }
               if (variant.type.kind === "String" || variant.type.kind === "Number") 
               {
-                arr.push(variant.type.value);
+                arr.push(DataFactory.literal(variant.type.value));
               }
             }
-    
-            writer.addQuad(propNameNode, nn("rdfs:range"), writer.blank([{
-              predicate: nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-              object:    nn("rdfs:Datatype"),
-            },{
-              predicate: nn("owl:oneOf"),
-              //TODO: owl:oneOf "red,blue" -> owl:oneOf ("red" "blue" )
-              object:  DataFactory.literal(arr.toString()),
-            }]));
-
+            writer.addQuad(propNameNode, nn("owl:oneOf"),writer.list(arr));
           }
 
           const doc = getDoc(program, prop);
