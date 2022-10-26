@@ -34,7 +34,8 @@ function createRdfEmitter(program: Program) {
     rdfs: "http://www.w3.org/2000/01/rdf-schema#",
     xsd: "http://www.w3.org/2001/XMLSchema#",
     skos: "http://www.w3.org/2004/02/skos/core#",
-    owl: "http://www.w3.org/2002/07/owl#http"
+    owl: "http://www.w3.org/2002/07/owl#http",
+    sh: "http://www.w3.org/ns/shacl#"
   };
 
   const writer = new Writer({ prefixes });
@@ -151,6 +152,24 @@ function createRdfEmitter(program: Program) {
       },
     });
 
+    
+    // SHACL DEF
+    navigateProgram(program, 
+      {
+      model(m) {
+        if (m.namespace?.name === "Cadl") {
+          return;
+        }
+
+        const nameNode = nn(nameForModelSHACL(m));
+
+        writer.addQuad(nameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("sh:NodeShape"));
+        writer.addQuad(nameNode, nn("rdfs:label"), DataFactory.literal("Shape for " + m.name));
+        writer.addQuad(nameNode, nn("sh:targetClass"), nn(nameForModel(m)));
+
+      },
+    });
+
    
     writer.end((err, result) => 
     {
@@ -197,6 +216,73 @@ function createRdfEmitter(program: Program) {
       }
     }
 
+
+    switch (intrinsic) {
+      case "boolean":
+        return "xsd:boolean";
+      case "bytes":
+        return "xsd:hexBinary"; // could be base64, check format?
+      case "duration":
+        return "xsd:dayTimeDuration";
+      case "float":
+        return "xsd:double"; // seems best for either float32 or float64?
+      case "float32":
+        return "xsd:float";
+      case "float64":
+        return "xsd:double";
+      case "integer":
+        return "xsd:integer";
+      case "uint8":
+        return "xsd:unsignedByte";
+      case "uint16":
+        return "xsd:unsignedShort";
+      case "uint32":
+        return "xsd:unsignedIntS";
+      case "uint64":
+        return "xsd:unsignedLong";
+      case "int8":
+        return "xsd:byte";
+      case "int16":
+        return "xsd:short";
+      case "int32":
+        return "xsd:int";
+      case "int64":
+        return "xsd:long";
+      case "safeint":
+        return "xsd:long";
+      case "string":
+        return "xsd:string";
+      case "numeric":
+        return "xsd:decimal";
+      case "plainDate":
+        return "xsd:date";
+      case "plainTime":
+        return "xsd:time";
+      case "zonedDateTime":
+        return "xsd:dateTime";
+      default:
+        throw new Error("xsd datatype not defined for instrinsic " + intrinsic);
+    }
+  }
+
+  function nameForModelSHACL(model: Model) {
+    const intrinsic = getIntrinsicModelName(program, model);
+
+    if (!intrinsic) {
+
+      let ns = getNsForModel(model);
+
+      if (model.name == "Array")
+      {
+        if (model.templateArguments != undefined)
+        {
+          return ns.prefix + ":" + ((<any>model.templateArguments[0]).name) + "_NodeShape";
+        }
+      }
+      else{
+        return ns.prefix + ":" + model.name + "_NodeShape";
+      }
+    }
 
 
     switch (intrinsic) {
