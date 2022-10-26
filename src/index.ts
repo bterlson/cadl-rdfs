@@ -54,6 +54,7 @@ function createRdfEmitter(program: Program) {
 
         // Class
         writer.addQuad(nameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:Class"));
+        writer.addQuad(nameNode, nn("rdfs:label"), DataFactory.literal(m.name));
 
         //Subclass
         if (m.baseModel) {
@@ -78,11 +79,17 @@ function createRdfEmitter(program: Program) {
         for (const prop of m.properties.values()) 
         {
           const propNameNode = nn(nameForProperty(prop));
-          writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DataTypeProperty"));
-          writer.addQuad(propNameNode, nn("rdfs:domain"), nameNode);
 
           if (prop.type.kind === "Model") 
           {
+              if (checkIfDataProperty(prop.type)==false)
+              {
+                writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:ObjectProperty"));
+              }
+              else{
+                writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DatatypeProperty"));
+              }
+
               writer.addQuad
               (
                 propNameNode,
@@ -94,6 +101,9 @@ function createRdfEmitter(program: Program) {
           else if (prop.type.kind === "Union") 
           {
 
+            // TODO: is it always datatypeproperty?
+            writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DatatypeProperty"));
+            
             const arr= [];
 
             for (const variant of prop.type.variants.values()) 
@@ -134,13 +144,37 @@ function createRdfEmitter(program: Program) {
     });
   }
 
+  function checkIfDataProperty(model: Model) {
+    const intrinsic = getIntrinsicModelName(program, model);
+
+    if (!intrinsic) {
+      return false;
+    }
+    else{
+      return true;
+    }
+  }
+
   function nameForModel(model: Model) {
     const intrinsic = getIntrinsicModelName(program, model);
 
     if (!intrinsic) {
+
       let ns = getNsForModel(model);
-      return ns.prefix + ":" + model.name;
+
+      if (model.name == "Array")
+      {
+        if (model.templateArguments != undefined)
+        {
+          return ns.prefix + ":" + ((<any>model.templateArguments[0]).name);
+        }
+      }
+      else{
+        return ns.prefix + ":" + model.name;
+      }
     }
+
+
 
     switch (intrinsic) {
       case "boolean":
