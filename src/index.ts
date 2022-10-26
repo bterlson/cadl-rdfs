@@ -44,19 +44,21 @@ function createRdfEmitter(program: Program) {
     emit,
   };
 
-  function emit() {
-    navigateProgram(program, {
+  function emit() 
+  {
+    // CLASS DEF 
+    navigateProgram(program, 
+      {
       model(m) {
         if (m.namespace?.name === "Cadl") {
           return;
         }
+
         const nameNode = nn(nameForModel(m));
 
-        // Class
         writer.addQuad(nameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:Class"));
         writer.addQuad(nameNode, nn("rdfs:label"), DataFactory.literal(m.name));
 
-        //Subclass
         if (m.baseModel) {
           writer.addQuad(
             nameNode, 
@@ -65,7 +67,6 @@ function createRdfEmitter(program: Program) {
           );
         }
 
-        // Comments
         const doc = getDoc(program, m);
         if (doc) {
           writer.addQuad(
@@ -74,8 +75,21 @@ function createRdfEmitter(program: Program) {
             DataFactory.literal(doc)
           );
         }
+
+      },
+    });
+
+
+    // PROPERTY DEF
+    navigateProgram(program, 
+      {
+      model(m) {
+        if (m.namespace?.name === "Cadl") {
+          return;
+        }
+
+        const nameNode = nn(nameForModel(m));
         
-        // Data properties
         for (const prop of m.properties.values()) 
         {
           const propNameNode = nn(nameForProperty(prop));
@@ -90,6 +104,8 @@ function createRdfEmitter(program: Program) {
                 writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DatatypeProperty"));
               }
 
+              writer.addQuad(propNameNode, nn("rdfs:label"), DataFactory.literal(prop.name));
+
               writer.addQuad
               (
                 propNameNode,
@@ -103,6 +119,7 @@ function createRdfEmitter(program: Program) {
 
             // TODO: is it always datatypeproperty?
             writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DatatypeProperty"));
+            writer.addQuad(propNameNode, nn("rdfs:label"), DataFactory.literal(prop.name));
             
             const arr= [];
 
@@ -117,6 +134,8 @@ function createRdfEmitter(program: Program) {
                 arr.push(DataFactory.literal(variant.type.value));
               }
             }
+
+            //Move this to SHACL part
             writer.addQuad(propNameNode, nn("owl:oneOf"),writer.list(arr));
           }
 
@@ -132,7 +151,9 @@ function createRdfEmitter(program: Program) {
       },
     });
 
-    writer.end((err, result) => {
+   
+    writer.end((err, result) => 
+    {
       if (err) {
         throw err;
       }
@@ -142,6 +163,8 @@ function createRdfEmitter(program: Program) {
         result
       );
     });
+
+
   }
 
   function checkIfDataProperty(model: Model) {
