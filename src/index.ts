@@ -122,22 +122,6 @@ function createRdfEmitter(program: Program) {
             writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DatatypeProperty"));
             writer.addQuad(propNameNode, nn("rdfs:label"), DataFactory.literal(prop.name));
             
-            const arr= [];
-
-            for (const variant of prop.type.variants.values()) 
-            {
-              if (variant.type.kind === "Model") 
-              {
-                arr.push(DataFactory.literal(nameForModel(variant.type)));
-              }
-              if (variant.type.kind === "String" || variant.type.kind === "Number") 
-              {
-                arr.push(DataFactory.literal(variant.type.value));
-              }
-            }
-
-            //Move this to SHACL part
-            writer.addQuad(propNameNode, nn("owl:oneOf"),writer.list(arr));
           }
 
           const doc = getDoc(program, prop);
