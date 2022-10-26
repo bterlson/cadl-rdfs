@@ -174,40 +174,40 @@ function createRdfEmitter(program: Program) {
           else if (prop.type.kind === "Union") 
           {
 
-            //const arr= [];
+            const arr= [];
 
             for (const variant of prop.type.variants.values()) 
             {
               if (variant.type.kind === "Model") 
               {
-                //arr.push(DataFactory.literal(nameForModel(variant.type)));
-                writer.addQuad(DataFactory.quad(
-                  nameNode,
-                  nn("sh:property"),
-                  writer.blank([{
-                    predicate: nn("sh:path"),
-                    object:    propNameNode,
-                  },{
-                    predicate: nn("sh:datatype"),
-                    object:    DataFactory.literal(nameForModel(variant.type)),
-                  }])
-                ));
+                arr.push(DataFactory.literal(nameForModel(variant.type)));
+              
               }
               if (variant.type.kind === "String" || variant.type.kind === "Number") 
               {
-                //arr.push(DataFactory.literal(variant.type.value));
-                writer.addQuad(DataFactory.quad(
+                arr.push(DataFactory.literal(variant.type.value)); 
+              }
+
+            }
+
+            if (arr.length == 1)
+            {
+              writer.addQuad(DataFactory.quad(
                   nameNode,
                   nn("sh:property"),
                   writer.blank([{
-                    predicate: nn("sh:path"),
+                   predicate: nn("sh:path"),
                     object:    propNameNode,
                   },{
                     predicate: nn("sh:datatype"),
-                    object:    DataFactory.literal(variant.type.value),
+                    object:    arr[0],
                   }])
                 ));
-              }
+            }
+            else
+            {
+              writer.addQuad(nameNode, nn("sh:path"), propNameNode);
+              writer.addQuad(nameNode, nn("sh:in"), writer.list(arr));
             }
           }
         }
