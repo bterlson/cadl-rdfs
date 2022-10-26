@@ -166,7 +166,67 @@ function createRdfEmitter(program: Program) {
         writer.addQuad(nameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("sh:NodeShape"));
         writer.addQuad(nameNode, nn("rdfs:label"), DataFactory.literal("Shape for " + m.name));
         writer.addQuad(nameNode, nn("sh:targetClass"), nn(nameForModel(m)));
+        
+        for (const prop of m.properties.values()) 
+        {
+          const propNameNode = nn(nameForProperty(prop));
 
+          if (prop.type.kind === "Model") 
+          {
+            writer.addQuad(DataFactory.quad(
+              nameNode,
+              nn("sh:property"),
+              writer.blank([{
+                predicate: nn("sh:path"),
+                object:    propNameNode,
+              },{
+                predicate: nn("sh:datatype"),
+                object:    nn(nameForModel(prop.type)),
+              }])
+            ));
+          
+          }
+
+          else if (prop.type.kind === "Union") 
+          {
+
+            //const arr= [];
+
+            for (const variant of prop.type.variants.values()) 
+            {
+              if (variant.type.kind === "Model") 
+              {
+                //arr.push(DataFactory.literal(nameForModel(variant.type)));
+                writer.addQuad(DataFactory.quad(
+                  nameNode,
+                  nn("sh:property"),
+                  writer.blank([{
+                    predicate: nn("sh:path"),
+                    object:    propNameNode,
+                  },{
+                    predicate: nn("sh:datatype"),
+                    object:    DataFactory.literal(nameForModel(variant.type)),
+                  }])
+                ));
+              }
+              if (variant.type.kind === "String" || variant.type.kind === "Number") 
+              {
+                //arr.push(DataFactory.literal(variant.type.value));
+                writer.addQuad(DataFactory.quad(
+                  nameNode,
+                  nn("sh:property"),
+                  writer.blank([{
+                    predicate: nn("sh:path"),
+                    object:    propNameNode,
+                  },{
+                    predicate: nn("sh:datatype"),
+                    object:    DataFactory.literal(variant.type.value),
+                  }])
+                ));
+              }
+            }
+          }
+        }
       },
     });
 
