@@ -231,7 +231,8 @@ function createRdfEmitter(program: Program) {
   }
 
   function checkIfDataProperty(model: Model) {
-    const intrinsic = getIntrinsicModelName(program, model);
+    return getIntrinsicModelName(program, model) !== undefined;
+
 
     if (!intrinsic) {
       return false;
