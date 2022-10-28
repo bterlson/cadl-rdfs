@@ -1,4 +1,4 @@
-import { Writer, DataFactory, Quad, BaseQuad, Variable, Literal } from "n3";
+import { Writer, DataFactory, Quad, BaseQuad, Variable, Literal, Store } from "n3";
 import path from "path";
 const nn = DataFactory.namedNode;
 
@@ -38,8 +38,10 @@ function createRdfEmitter(program: Program) {
     sh: "http://www.w3.org/ns/shacl#"
   };
 
-  const writer = new Writer({ prefixes });
-  
+  const writer_generic =  new Writer({ prefixes });
+  const writer_classes = new Writer({ prefixes });
+  const writer_props = new Writer({ prefixes });
+  const writer_constraints= new Writer({ prefixes });
 
   return {
     emit,
@@ -47,7 +49,7 @@ function createRdfEmitter(program: Program) {
 
   function emit() 
   {
-    // CLASS DEF 
+
     navigateProgram(program, 
       {
       model(m) {
@@ -55,13 +57,15 @@ function createRdfEmitter(program: Program) {
           return;
         }
 
+        //CLASS PART
+
         const nameNode = nn(nameForModel(m));
 
-        writer.addQuad(nameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:Class"));
-        writer.addQuad(nameNode, nn("rdfs:label"), DataFactory.literal(m.name));
+        writer_classes.addQuad(nameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:Class"));
+        writer_classes.addQuad(nameNode, nn("rdfs:label"), DataFactory.literal(m.name));
 
         if (m.baseModel) {
-          writer.addQuad(
+          writer_classes.addQuad(
             nameNode, 
             nn("rdfs:subclassOf"),
             nn(nameForModel(m.baseModel))
@@ -70,110 +74,71 @@ function createRdfEmitter(program: Program) {
 
         const doc = getDoc(program, m);
         if (doc) {
-          writer.addQuad(
+          writer_classes.addQuad(
             nameNode,
             nn("skos:note"),
             DataFactory.literal(doc)
           );
         }
 
-      },
-    });
+        //PROP PART & SHACL part
+
+        const nameNodeShacl = nn(nameForModelSHACL(m));
+        writer_constraints.addQuad(nameNodeShacl, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("sh:NodeShape"));
+        writer_constraints.addQuad(nameNodeShacl, nn("rdfs:label"), DataFactory.literal("Shape for " + m.name));
+        writer_constraints.addQuad(nameNodeShacl, nn("sh:targetClass"), nn(nameForModel(m)));
 
 
-    // PROPERTY DEF
-    navigateProgram(program, 
-      {
-      model(m) {
-        if (m.namespace?.name === "Cadl") {
-          return;
-        }
-
-        const nameNode = nn(nameForModel(m));
-        
         for (const prop of m.properties.values()) 
         {
           const propNameNode = nn(nameForProperty(prop));
 
           if (prop.type.kind === "Model") 
           {
-              if (!checkIfDataProperty(prop.type))
 
+              // PROPERTIES
+              if (!checkIfDataProperty(prop.type))
               {
-                writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:ObjectProperty"));
+                writer_props.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:ObjectProperty"));
               }
               else{
-                writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DatatypeProperty"));
+                writer_props.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DatatypeProperty"));
               }
 
-              writer.addQuad(propNameNode, nn("rdfs:label"), DataFactory.literal(prop.name));
-
-              writer.addQuad
+              writer_props.addQuad(propNameNode, nn("rdfs:label"), DataFactory.literal(prop.name));
+              writer_props.addQuad
               (
                 propNameNode,
                 nn("rdfs:range"),
                 nn(nameForModel(prop.type))
               );
+
+              // SHACL
+              writer_constraints.addQuad(DataFactory.quad(
+                nameNodeShacl,
+                nn("sh:property"),
+                writer_constraints.blank
+                ([{
+                  predicate: nn("sh:path"),
+                  object:    propNameNode,
+                },{
+                  predicate: nn("sh:datatype"),
+                  object:    nn(nameForModel(prop.type)),
+                }])
+              ));
+
+
           }
 
           else if (prop.type.kind === "Union") 
           {
 
-            // TODO: is it always datatypeproperty?
-            writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DatatypeProperty"));
-            writer.addQuad(propNameNode, nn("rdfs:label"), DataFactory.literal(prop.name));
-            
-          }
+            // PROPERTIES
 
-          const doc = getDoc(program, prop);
-          if (doc) {
-            writer.addQuad(
-              propNameNode,
-              nn("skos:note"),
-              DataFactory.literal(doc)
-            );
-          }
-        }
-      },
-    });
+            writer_props.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DatatypeProperty"));
+            writer_props.addQuad(propNameNode, nn("rdfs:label"), DataFactory.literal(prop.name));
 
-    
-    // SHACL DEF
-    navigateProgram(program, 
-      {
-      model(m) {
-        if (m.namespace?.name === "Cadl") {
-          return;
-        }
-
-        const nameNode = nn(nameForModelSHACL(m));
-
-        writer.addQuad(nameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("sh:NodeShape"));
-        writer.addQuad(nameNode, nn("rdfs:label"), DataFactory.literal("Shape for " + m.name));
-        writer.addQuad(nameNode, nn("sh:targetClass"), nn(nameForModel(m)));
-        
-        for (const prop of m.properties.values()) 
-        {
-          const propNameNode = nn(nameForProperty(prop));
-
-          if (prop.type.kind === "Model") 
-          {
-            writer.addQuad(DataFactory.quad(
-              nameNode,
-              nn("sh:property"),
-              writer.blank([{
-                predicate: nn("sh:path"),
-                object:    propNameNode,
-              },{
-                predicate: nn("sh:datatype"),
-                object:    nn(nameForModel(prop.type)),
-              }])
-            ));
-          
-          }
-
-          else if (prop.type.kind === "Union") 
-          {
+            //SHACL
 
             const arr= [];
 
@@ -193,10 +158,10 @@ function createRdfEmitter(program: Program) {
 
             if (arr.length == 1)
             {
-              writer.addQuad(DataFactory.quad(
-                  nameNode,
+              writer_constraints.addQuad(DataFactory.quad(
+                nameNodeShacl,
                   nn("sh:property"),
-                  writer.blank([{
+                  writer_constraints.blank([{
                    predicate: nn("sh:path"),
                     object:    propNameNode,
                   },{
@@ -207,40 +172,57 @@ function createRdfEmitter(program: Program) {
             }
             else
             {
-              writer.addQuad(nameNode, nn("sh:path"), propNameNode);
-              writer.addQuad(nameNode, nn("sh:in"), writer.list(arr));
+              writer_constraints.addQuad(nameNodeShacl, nn("sh:path"), propNameNode);
+              writer_constraints.addQuad(nameNodeShacl, nn("sh:in"), writer_constraints.list(arr));
             }
+
+            
+          }
+
+          const doc = getDoc(program, prop);
+          if (doc) {
+            writer_props.addQuad(
+              propNameNode,
+              nn("skos:note"),
+              DataFactory.literal(doc)
+            );
+
           }
         }
       },
     });
 
-   
-    writer.end((err, result) => 
+
+    writer_classes.end((err, result)=> 
     {
       if (err) {
         throw err;
       }
+      
+      writer_props.end((err, result1) => 
+      {
+          if (err) {
+            throw err;
+          }
 
-      program.host.writeFile(
-        path.join(program.compilerOptions.outputPath!, "models.ttl"),
-        result
-      );
+          writer_constraints.end((err, result2) => 
+          {
+              if (err) {
+                throw err;
+              }
+          
+              program.host.writeFile(
+                path.join(program.compilerOptions.outputPath!, "models.ttl"),
+                result + result1 + result2
+              );
+          })
+      })
     });
-
-
+    
   }
 
   function checkIfDataProperty(model: Model) {
     return getIntrinsicModelName(program, model) !== undefined;
-
-
-    if (!intrinsic) {
-      return false;
-    }
-    else{
-      return true;
-    }
   }
 
   function nameForModel(model: Model) {
@@ -250,7 +232,7 @@ function createRdfEmitter(program: Program) {
 
       let ns = getNsForModel(model);
 
-      if (model.name == "Array")
+      if (model.name === "Array")
       {
         if (model.templateArguments != undefined)
         {
@@ -311,72 +293,9 @@ function createRdfEmitter(program: Program) {
     }
   }
 
-  function nameForModelSHACL(model: Model) {
-    const intrinsic = getIntrinsicModelName(program, model);
-
-    if (!intrinsic) {
-
-      let ns = getNsForModel(model);
-
-      if (model.name == "Array")
-      {
-        if (model.templateArguments != undefined)
-        {
-          return ns.prefix + ":" + ((<any>model.templateArguments[0]).name) + "_NodeShape";
-        }
-      }
-      else{
-        return ns.prefix + ":" + model.name + "_NodeShape";
-      }
-    }
-
-
-    switch (intrinsic) {
-      case "boolean":
-        return "xsd:boolean";
-      case "bytes":
-        return "xsd:hexBinary"; // could be base64, check format?
-      case "duration":
-        return "xsd:dayTimeDuration";
-      case "float":
-        return "xsd:double"; // seems best for either float32 or float64?
-      case "float32":
-        return "xsd:float";
-      case "float64":
-        return "xsd:double";
-      case "integer":
-        return "xsd:integer";
-      case "uint8":
-        return "xsd:unsignedByte";
-      case "uint16":
-        return "xsd:unsignedShort";
-      case "uint32":
-        return "xsd:unsignedIntS";
-      case "uint64":
-        return "xsd:unsignedLong";
-      case "int8":
-        return "xsd:byte";
-      case "int16":
-        return "xsd:short";
-      case "int32":
-        return "xsd:int";
-      case "int64":
-        return "xsd:long";
-      case "safeint":
-        return "xsd:long";
-      case "string":
-        return "xsd:string";
-      case "numeric":
-        return "xsd:decimal";
-      case "plainDate":
-        return "xsd:date";
-      case "plainTime":
-        return "xsd:time";
-      case "zonedDateTime":
-        return "xsd:dateTime";
-      default:
-        throw new Error("xsd datatype not defined for instrinsic " + intrinsic);
-    }
+  function nameForModelSHACL(model: Model)
+  {
+    return nameForModel(model) + "_NodeShape";
   }
 
   function nameForProperty(prop: ModelProperty) {
@@ -384,7 +303,8 @@ function createRdfEmitter(program: Program) {
     return ns.prefix + ":" + prop.name;
   }
 
-  function getNsForModel(type: Model) {
+  function getNsForModel(type: Model) 
+  {
     let current: Model | Namespace | undefined = type;
     let nsData: RdfnsData | undefined;
 
@@ -397,8 +317,9 @@ function createRdfEmitter(program: Program) {
       nsData = { prefix: "ex", namespace: "http://example.org/" };
     }
 
-    if (!prefixes.hasOwnProperty(nsData.prefix)) {
-      writer.addPrefix(nsData.prefix, nsData.namespace);
+    if (!prefixes.hasOwnProperty(nsData.prefix))
+    {
+      writer_generic.addPrefix(nsData.prefix, nsData.namespace);
       prefixes[nsData.prefix] = nsData.namespace;
     }
 
