@@ -97,7 +97,8 @@ function createRdfEmitter(program: Program) {
 
           if (prop.type.kind === "Model") 
           {
-              if (checkIfDataProperty(prop.type)==false)
+              if (!checkIfDataProperty(prop.type))
+
               {
                 writer.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:ObjectProperty"));
               }
