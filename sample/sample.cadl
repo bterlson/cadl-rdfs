@@ -6,7 +6,6 @@ using CadlRdf;
 
 namespace Resources;
 
-
 @doc("a person")
 model Person {
   name: string;
@@ -31,3 +30,7 @@ model Truck extends Vehicle {
   @doc("how many cubic feet of space")
   cargoSpace: int32;
 }
+
+@maxLength(9)
+@doc("a nine digit number")
+model CUSIP is string;
