@@ -308,19 +308,33 @@ function createRdfEmitter(program: Program) {
     }
 
     if (!nsData) {
-      nsData = { prefix: "ex", namespace: "http://example.org/" };
+      nsData = { prefix: "ex", namespace: "http://example.org/"};
     }
 
     if (!prefixes.hasOwnProperty(nsData.prefix))
     {
-      writer_classes.addPrefix(nsData.prefix, nsData.namespace);
-      writer_props.addPrefix(nsData.prefix, nsData.namespace);
-      writer_constraints.addPrefix(nsData.prefix, nsData.namespace);
+      writer_classes.addPrefix(nsData.prefix, nsData.namespace + getNameSpace(type) + "/");
+      writer_props.addPrefix(nsData.prefix, nsData.namespace + getNameSpace(type) + "/");
+      writer_constraints.addPrefix(nsData.prefix, nsData.namespace + getNameSpace(type) + "/");
       prefixes[nsData.prefix] = nsData.namespace;
     }
 
     return nsData;
   }
+
+  function getNameSpace(model:Model)
+  {
+    let nm = model.namespace;
+    let nmString = "";
+    while(nm)
+    {
+      nmString = nm.name + "." + nmString ;
+      nm = nm.namespace ;
+    }
+
+    return nmString.substring(1, nmString.length-1);
+  }
+  
 }
 
 

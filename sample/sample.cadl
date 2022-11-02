@@ -3,7 +3,9 @@ import "cadl-rdf";
 using CadlRdf;
 
 @rdfns("ex", "http://example.org/")
+
 namespace Resources;
+
 
 @doc("a person")
 model Person {
