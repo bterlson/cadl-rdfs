@@ -38,7 +38,6 @@ function createRdfEmitter(program: Program) {
     sh: "http://www.w3.org/ns/shacl#"
   };
 
-  const writer_generic =  new Writer({ prefixes });
   const writer_classes = new Writer({ prefixes });
   const writer_props = new Writer({ prefixes });
   const writer_constraints= new Writer({ prefixes });
@@ -60,7 +59,6 @@ function createRdfEmitter(program: Program) {
         //CLASS PART
 
         const nameNode = nn(nameForModel(m));
-
         writer_classes.addQuad(nameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:Class"));
         writer_classes.addQuad(nameNode, nn("rdfs:label"), DataFactory.literal(m.name));
 
@@ -113,6 +111,7 @@ function createRdfEmitter(program: Program) {
                 nn(nameForModel(prop.type))
               );
 
+
               // SHACL
               writer_constraints.addQuad(DataFactory.quad(
                 nameNodeShacl,
@@ -132,50 +131,45 @@ function createRdfEmitter(program: Program) {
 
           else if (prop.type.kind === "Union") 
           {
-
             // PROPERTIES
-
             writer_props.addQuad(propNameNode, nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"), nn("owl:DatatypeProperty"));
             writer_props.addQuad(propNameNode, nn("rdfs:label"), DataFactory.literal(prop.name));
 
             //SHACL
-
             const arr= [];
+            const writer_temp= new Writer({ prefixes });
 
             for (const variant of prop.type.variants.values()) 
             {
               if (variant.type.kind === "Model") 
               {
-                arr.push(DataFactory.literal(nameForModel(variant.type)));
-              
+                arr.push (
+                  writer_temp.blank([{
+                        predicate: nn("sh:path"),
+                        object:    propNameNode,
+                       },{
+                         predicate: nn("sh:hasValue"),
+                         object:    DataFactory.literal(nameForModel(variant.type)),
+                       }])
+                    );
+
               }
               if (variant.type.kind === "String" || variant.type.kind === "Number") 
               {
-                arr.push(DataFactory.literal(variant.type.value)); 
+                  arr.push (
+                    writer_temp.blank([{
+                          predicate: nn("sh:path"),
+                          object:    propNameNode,
+                         },{
+                           predicate: nn("sh:hasValue"),
+                           object:   DataFactory.literal(variant.type.value),
+                         }])
+                      );
               }
 
             }
 
-            if (arr.length == 1)
-            {
-              writer_constraints.addQuad(DataFactory.quad(
-                nameNodeShacl,
-                  nn("sh:property"),
-                  writer_constraints.blank([{
-                   predicate: nn("sh:path"),
-                    object:    propNameNode,
-                  },{
-                    predicate: nn("sh:datatype"),
-                    object:    arr[0],
-                  }])
-                ));
-            }
-            else
-            {
-              writer_constraints.addQuad(nameNodeShacl, nn("sh:path"), propNameNode);
-              writer_constraints.addQuad(nameNodeShacl, nn("sh:in"), writer_constraints.list(arr));
-            }
-
+            writer_constraints.addQuad(nameNodeShacl, nn("sh:or"), writer_constraints.list(arr));
             
           }
 
@@ -319,7 +313,9 @@ function createRdfEmitter(program: Program) {
 
     if (!prefixes.hasOwnProperty(nsData.prefix))
     {
-      writer_generic.addPrefix(nsData.prefix, nsData.namespace);
+      writer_classes.addPrefix(nsData.prefix, nsData.namespace);
+      writer_props.addPrefix(nsData.prefix, nsData.namespace);
+      writer_constraints.addPrefix(nsData.prefix, nsData.namespace);
       prefixes[nsData.prefix] = nsData.namespace;
     }
 
