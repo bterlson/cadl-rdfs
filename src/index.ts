@@ -75,9 +75,7 @@ function createRdfEmitter(program: Program) {
           return;
         }
 
-        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< CLASS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-        // Checks if Model is actual class (model Truck) or Model is a data property (model CUSIP is string)
+        // Checks type of model
         const intrinsicName = getIntrinsicModelName(program, m);
 
         if (!intrinsicName) {
@@ -104,9 +102,9 @@ function createRdfEmitter(program: Program) {
             );
           }
 
-          writeDecoratorsInBuiltGeneralInfo(program, m, nameNode, classQuads);
+          writeDecoratorsGeneral(program, m, nameNode, classQuads);
 
-          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+          // Class shape
 
           const nameNodeShacl = nn(nameForModelSHACL(m, "_NodeShape"));
           constraintQuadsClass.push(
@@ -129,15 +127,14 @@ function createRdfEmitter(program: Program) {
             quad(nameNodeShacl, nn("sh:targetClass"), nn(nameForModel(m)))
           );
 
-          writeDecoratorsInBuiltConstraints(
+          writeDecoratorsConstraints(
             program,
             m,
             nameNodeShacl,
             constraintQuadsClass
           );
 
-          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
+          // Properties
           for (const prop of m.properties.values()) {
             const propNameNode = nn(nameForProperty(prop));
 
@@ -252,15 +249,10 @@ function createRdfEmitter(program: Program) {
               );
             }
 
-            writeDecoratorsInBuiltGeneralInfo(
-              program,
-              prop,
-              propNameNode,
-              propQuads
-            );
+            writeDecoratorsGeneral(program, prop, propNameNode, propQuads);
 
-            // We need SHACL shape for dataproperty
-            if (checkIfDecoratorsGeneric(prop) == false) {
+            // We need SHACL shape for dataproperty if decorators enforce constraints
+            if (checkDecoratorsIfGeneral(prop) == false) {
               const propNameNodeShacl = nn(
                 nameForPropertySHACL(prop, "_PropertyShape")
               );
@@ -287,7 +279,7 @@ function createRdfEmitter(program: Program) {
                 )
               );
 
-              writeDecoratorsInBuiltConstraints(
+              writeDecoratorsConstraints(
                 program,
                 prop,
                 propNameNodeShacl,
@@ -316,12 +308,7 @@ function createRdfEmitter(program: Program) {
             )
           );
 
-          writeDecoratorsInBuiltGeneralInfo(
-            program,
-            m,
-            nn(nameNode),
-            propQuads
-          );
+          writeDecoratorsGeneral(program, m, nn(nameNode), propQuads);
 
           const nameNodeShacl = nn(nameForModelSHACL(m, "_PropertyShape"));
           constraintQuadsProps.push(
@@ -349,7 +336,7 @@ function createRdfEmitter(program: Program) {
             )
           );
 
-          writeDecoratorsInBuiltConstraints(
+          writeDecoratorsConstraints(
             program,
             m,
             nameNodeShacl,
@@ -382,7 +369,7 @@ function createRdfEmitter(program: Program) {
     });
   }
 
-  function checkIfDecoratorsGeneric(prop: ModelProperty) {
+  function checkDecoratorsIfGeneral(prop: ModelProperty) {
     let setDecorators = new Set();
     for (let dec of prop.decorators) {
       {
@@ -401,7 +388,7 @@ function createRdfEmitter(program: Program) {
     }
   }
 
-  function writeDecoratorsInBuiltGeneralInfo(
+  function writeDecoratorsGeneral(
     program: Program,
     m: Model | ModelProperty,
     object: NamedNode,
@@ -429,7 +416,7 @@ function createRdfEmitter(program: Program) {
     }
   }
 
-  function writeDecoratorsInBuiltConstraints(
+  function writeDecoratorsConstraints(
     program: Program,
     m: Model | ModelProperty,
     object: NamedNode,
