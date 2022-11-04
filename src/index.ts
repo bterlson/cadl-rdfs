@@ -24,7 +24,18 @@ import {
   getDoc,
   isArrayModelType,
   createCadlLibrary,
+  getMaxLength,
+  getPattern,
+  getMinLength,
+  getKnownValues,
+  getMinValue,
+  getMaxValue,
+  getSummary,
+  getDeprecated,
+  getFormat,
+  isSecret,
 } from "@cadl-lang/compiler";
+import { NamedNode } from "rdf-js";
 
 const lib = createCadlLibrary({
   name: "cadl-rdf",
@@ -50,7 +61,8 @@ function createRdfEmitter(program: Program) {
   const writer = new Writer({ prefixes });
   const classQuads: Quad[] = [];
   const propQuads: Quad[] = [];
-  const constraintQuads: Quad[] = [];
+  const constraintQuadsClass: Quad[] = [];
+  const constraintQuadsProps: Quad[] = [];
 
   return {
     emit,
@@ -63,7 +75,8 @@ function createRdfEmitter(program: Program) {
           return;
         }
 
-        // CLASS PART
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< CLASS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
         // Checks if Model is actual class (model Truck) or Model is a data property (model CUSIP is string)
         const intrinsicName = getIntrinsicModelName(program, m);
 
@@ -91,39 +104,44 @@ function createRdfEmitter(program: Program) {
             );
           }
 
-          const doc = getDoc(program, m);
-          if (doc) {
-            classQuads.push(
-              quad(nameNode, nn("rdfs:comment"), DataFactory.literal(doc))
-            );
-          }
+          writeDecoratorsInBuiltGeneralInfo(program, m, nameNode, classQuads);
 
-          //PROP PART & SHACL part
+          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-          const nameNodeShacl = nn(nameForModelSHACL(m));
-          constraintQuads.push(
+          const nameNodeShacl = nn(nameForModelSHACL(m, "_NodeShape"));
+          constraintQuadsClass.push(
             quad(
               nameNodeShacl,
               nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
               nn("sh:NodeShape")
             )
           );
-          constraintQuads.push(
+
+          constraintQuadsClass.push(
             quad(
               nameNodeShacl,
               nn("rdfs:label"),
               DataFactory.literal("Shape for " + m.name)
             )
           );
-          constraintQuads.push(
+
+          constraintQuadsClass.push(
             quad(nameNodeShacl, nn("sh:targetClass"), nn(nameForModel(m)))
           );
+
+          writeDecoratorsInBuiltConstraints(
+            program,
+            m,
+            nameNodeShacl,
+            constraintQuadsClass
+          );
+
+          // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
           for (const prop of m.properties.values()) {
             const propNameNode = nn(nameForProperty(prop));
 
             if (prop.type.kind === "Model") {
-              // PROPERTIES
               if (!checkIfDataProperty(prop.type)) {
                 propQuads.push(
                   quad(
@@ -157,8 +175,7 @@ function createRdfEmitter(program: Program) {
                 )
               );
 
-              // SHACL
-              constraintQuads.push(
+              constraintQuadsClass.push(
                 quad(
                   nameNodeShacl,
                   nn("sh:property"),
@@ -175,7 +192,6 @@ function createRdfEmitter(program: Program) {
                 )
               );
             } else if (prop.type.kind === "Union") {
-              // PROPERTIES
               propQuads.push(
                 quad(
                   propNameNode,
@@ -191,7 +207,6 @@ function createRdfEmitter(program: Program) {
                 )
               );
 
-              //SHACL
               const arr = [];
 
               for (const variant of prop.type.variants.values()) {
@@ -228,7 +243,7 @@ function createRdfEmitter(program: Program) {
                 }
               }
 
-              constraintQuads.push(
+              constraintQuadsClass.push(
                 quad(
                   nameNodeShacl,
                   nn("sh:or"),
@@ -237,10 +252,46 @@ function createRdfEmitter(program: Program) {
               );
             }
 
-            const doc = getDoc(program, prop);
-            if (doc) {
-              propQuads.push(
-                quad(propNameNode, nn("rdfs:comment"), DataFactory.literal(doc))
+            writeDecoratorsInBuiltGeneralInfo(
+              program,
+              prop,
+              propNameNode,
+              propQuads
+            );
+
+            // We need SHACL shape for dataproperty
+            if (checkIfDecoratorsGeneric(prop) == false) {
+              const propNameNodeShacl = nn(
+                nameForPropertySHACL(prop, "_PropertyShape")
+              );
+
+              constraintQuadsProps.push(
+                quad(
+                  propNameNodeShacl,
+                  nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                  nn("sh:PropertyShape")
+                )
+              );
+              constraintQuadsProps.push(
+                quad(
+                  propNameNodeShacl,
+                  nn("rdfs:label"),
+                  DataFactory.literal("Shape for " + prop.name)
+                )
+              );
+              constraintQuadsProps.push(
+                quad(
+                  propNameNodeShacl,
+                  nn("sh:targetClass"),
+                  nn(nameForProperty(prop))
+                )
+              );
+
+              writeDecoratorsInBuiltConstraints(
+                program,
+                prop,
+                propNameNodeShacl,
+                constraintQuadsProps
               );
             }
           }
@@ -264,6 +315,46 @@ function createRdfEmitter(program: Program) {
               nn(intrinsicToRdf(intrinsicName))
             )
           );
+
+          writeDecoratorsInBuiltGeneralInfo(
+            program,
+            m,
+            nn(nameNode),
+            propQuads
+          );
+
+          const nameNodeShacl = nn(nameForModelSHACL(m, "_PropertyShape"));
+          constraintQuadsProps.push(
+            quad(
+              nameNodeShacl,
+              nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+              nn("sh:PropertyShape")
+            )
+          );
+          constraintQuadsProps.push(
+            quad(
+              nameNodeShacl,
+              nn("rdfs:label"),
+              DataFactory.literal("Shape for " + m.name)
+            )
+          );
+          constraintQuadsProps.push(
+            quad(nameNodeShacl, nn("sh:path"), nn(nameForModel(m)))
+          );
+          constraintQuadsProps.push(
+            quad(
+              nameNodeShacl,
+              nn("sh:datatype"),
+              nn(intrinsicToRdf(intrinsicName))
+            )
+          );
+
+          writeDecoratorsInBuiltConstraints(
+            program,
+            m,
+            nameNodeShacl,
+            constraintQuadsProps
+          );
         }
       },
     });
@@ -272,20 +363,126 @@ function createRdfEmitter(program: Program) {
     writer.addQuads(classQuads);
     writer.addQuad(nn("propertyMarker"), nn("marker"), nn("marker"));
     writer.addQuads(propQuads);
-    writer.addQuad(nn("shapeMarker"), nn("marker"), nn("marker"));
-    writer.addQuads(constraintQuads);
+    writer.addQuad(nn("shapeClassMarker"), nn("marker"), nn("marker"));
+    writer.addQuads(constraintQuadsClass);
+    writer.addQuad(nn("shapePropMarker"), nn("marker"), nn("marker"));
+    writer.addQuads(constraintQuadsProps);
 
     writer.end((err, result) => {
       result = result
         .replace(/^<entityMarker.*$/m, "\n# Entities")
         .replace(/^<propertyMarker.*$/m, "\n# Properties")
-        .replace(/^<shapeMarker.*$/m, "\n# Shapes");
+        .replace(/^<shapeClassMarker.*$/m, "\n# Shapes for Entities")
+        .replace(/^<shapePropMarker.*$/m, "\n# Shapes for Properties");
 
       program.host.writeFile(
         path.join(program.compilerOptions.outputPath!, "models.ttl"),
         result
       );
     });
+  }
+
+  function checkIfDecoratorsGeneric(prop: ModelProperty) {
+    let setDecorators = new Set();
+    for (let dec of prop.decorators) {
+      {
+        setDecorators.add(dec.decorator.name);
+      }
+    }
+
+    setDecorators.delete("$summary");
+    setDecorators.delete("$doc");
+    setDecorators.delete("$deprecated");
+
+    if (setDecorators.size == 0) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  function writeDecoratorsInBuiltGeneralInfo(
+    program: Program,
+    m: Model | ModelProperty,
+    object: NamedNode,
+    arrayQuads: Quad[]
+  ) {
+    const doc = getDoc(program, m);
+    if (doc) {
+      arrayQuads.push(
+        quad(object, nn("rdfs:comment"), DataFactory.literal(doc))
+      );
+    }
+
+    const summary = getSummary(program, m);
+    if (summary) {
+      arrayQuads.push(
+        quad(object, nn("sh:summary"), DataFactory.literal(summary))
+      );
+    }
+
+    const deprecated = getDeprecated(program, m);
+    if (deprecated) {
+      arrayQuads.push(
+        quad(object, nn("sh:deprecated"), DataFactory.literal(deprecated))
+      );
+    }
+  }
+
+  function writeDecoratorsInBuiltConstraints(
+    program: Program,
+    m: Model | ModelProperty,
+    object: NamedNode,
+    arrayQuads: Quad[]
+  ) {
+    const maxLength = getMaxLength(program, m);
+    if (maxLength) {
+      arrayQuads.push(
+        quad(object, nn("sh:maxLength"), DataFactory.literal(maxLength))
+      );
+    }
+
+    const minLength = getMinLength(program, m);
+    if (minLength) {
+      arrayQuads.push(
+        quad(object, nn("sh:minLength"), DataFactory.literal(minLength))
+      );
+    }
+
+    const minValue = getMinValue(program, m);
+    if (minValue) {
+      arrayQuads.push(
+        quad(object, nn("sh:minValue"), DataFactory.literal(minValue))
+      );
+    }
+
+    const maxValue = getMaxValue(program, m);
+    if (maxValue) {
+      arrayQuads.push(
+        quad(object, nn("sh:maxValue"), DataFactory.literal(maxValue))
+      );
+    }
+
+    const format = getFormat(program, m);
+    if (format) {
+      arrayQuads.push(
+        quad(object, nn("sh:format"), DataFactory.literal(format))
+      );
+    }
+
+    const pattern = getPattern(program, m);
+    if (pattern) {
+      arrayQuads.push(
+        quad(object, nn("sh:pattern"), DataFactory.literal(pattern))
+      );
+    }
+
+    const secret = isSecret(program, m);
+    if (secret) {
+      arrayQuads.push(
+        quad(object, nn("sh:secret"), DataFactory.literal("True"))
+      );
+    }
   }
 
   function checkIfDataProperty(model: Model) {
@@ -360,8 +557,13 @@ function createRdfEmitter(program: Program) {
     }
   }
 
-  function nameForModelSHACL(model: Model) {
-    return nameForModel(model) + "_NodeShape";
+  function nameForModelSHACL(model: Model, shapeType: string) {
+    return nameForModel(model) + shapeType;
+  }
+
+  function nameForPropertySHACL(prop: ModelProperty, shapeType: string) {
+    let ns = getNsForModel(prop.model!);
+    return ns.prefix + ":" + prop.name + shapeType;
   }
 
   function nameForProperty(prop: ModelProperty) {

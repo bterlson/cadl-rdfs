@@ -7,7 +7,10 @@ using CadlRdf;
 namespace Resources;
 
 @doc("a person")
+@summary("person summary")
 model Person {
+  @doc("Name prop of person")
+  @minLength(2)
   name: string;
   age: int8;
   vehicles: Vehicle[];
@@ -20,8 +23,7 @@ model Vehicle {
 
 @doc("a vehicle that moves people")
 model Car extends Vehicle {
-
-  @doc("no superfluous vowels here")
+  @summary("color summary")
   color: "red" | "blue";
 }
 
@@ -31,6 +33,6 @@ model Truck extends Vehicle {
   cargoSpace: int32;
 }
 
-@maxLength(9)
+@format("0378331000")
 @doc("a nine digit number")
 model CUSIP is string;
