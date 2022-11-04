@@ -9,6 +9,7 @@ import {
 } from "n3";
 import path from "path";
 const nn = DataFactory.namedNode;
+const quad = DataFactory.quad;
 
 import {
   createDecoratorDefinition,
@@ -46,9 +47,10 @@ function createRdfEmitter(program: Program) {
     sh: "http://www.w3.org/ns/shacl#",
   };
 
-  const writer_classes = new Writer({ prefixes });
-  const writer_props = new Writer({ prefixes });
-  const writer_constraints = new Writer({ prefixes });
+  const writer = new Writer({ prefixes });
+  const classQuads: Quad[] = [];
+  const propQuads: Quad[] = [];
+  const constraintQuads: Quad[] = [];
 
   return {
     emit,
@@ -68,51 +70,53 @@ function createRdfEmitter(program: Program) {
         if (!intrinsicName) {
           // Class
           const nameNode = nn(nameForModel(m));
-          writer_classes.addQuad(
-            nameNode,
-            nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            nn("owl:Class")
+          classQuads.push(
+            quad(
+              nameNode,
+              nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+              nn("owl:Class")
+            )
           );
-          writer_classes.addQuad(
-            nameNode,
-            nn("rdfs:label"),
-            DataFactory.literal(m.name)
+          classQuads.push(
+            quad(nameNode, nn("rdfs:label"), DataFactory.literal(m.name))
           );
 
           if (m.baseModel) {
-            writer_classes.addQuad(
-              nameNode,
-              nn("rdfs:subclassOf"),
-              nn(nameForModel(m.baseModel))
+            classQuads.push(
+              quad(
+                nameNode,
+                nn("rdfs:subclassOf"),
+                nn(nameForModel(m.baseModel))
+              )
             );
           }
 
           const doc = getDoc(program, m);
           if (doc) {
-            writer_classes.addQuad(
-              nameNode,
-              nn("rdfs:comment"),
-              DataFactory.literal(doc)
+            classQuads.push(
+              quad(nameNode, nn("rdfs:comment"), DataFactory.literal(doc))
             );
           }
 
           //PROP PART & SHACL part
 
           const nameNodeShacl = nn(nameForModelSHACL(m));
-          writer_constraints.addQuad(
-            nameNodeShacl,
-            nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            nn("sh:NodeShape")
+          constraintQuads.push(
+            quad(
+              nameNodeShacl,
+              nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+              nn("sh:NodeShape")
+            )
           );
-          writer_constraints.addQuad(
-            nameNodeShacl,
-            nn("rdfs:label"),
-            DataFactory.literal("Shape for " + m.name)
+          constraintQuads.push(
+            quad(
+              nameNodeShacl,
+              nn("rdfs:label"),
+              DataFactory.literal("Shape for " + m.name)
+            )
           );
-          writer_constraints.addQuad(
-            nameNodeShacl,
-            nn("sh:targetClass"),
-            nn(nameForModel(m))
+          constraintQuads.push(
+            quad(nameNodeShacl, nn("sh:targetClass"), nn(nameForModel(m)))
           );
 
           for (const prop of m.properties.values()) {
@@ -121,36 +125,44 @@ function createRdfEmitter(program: Program) {
             if (prop.type.kind === "Model") {
               // PROPERTIES
               if (!checkIfDataProperty(prop.type)) {
-                writer_props.addQuad(
-                  propNameNode,
-                  nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                  nn("owl:ObjectProperty")
+                propQuads.push(
+                  quad(
+                    propNameNode,
+                    nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                    nn("owl:ObjectProperty")
+                  )
                 );
               } else {
-                writer_props.addQuad(
-                  propNameNode,
-                  nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                  nn("owl:DatatypeProperty")
+                propQuads.push(
+                  quad(
+                    propNameNode,
+                    nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                    nn("owl:DatatypeProperty")
+                  )
                 );
               }
 
-              writer_props.addQuad(
-                propNameNode,
-                nn("rdfs:label"),
-                DataFactory.literal(prop.name)
+              propQuads.push(
+                quad(
+                  propNameNode,
+                  nn("rdfs:label"),
+                  DataFactory.literal(prop.name)
+                )
               );
-              writer_props.addQuad(
-                propNameNode,
-                nn("rdfs:range"),
-                nn(nameForModel(prop.type))
+              propQuads.push(
+                quad(
+                  propNameNode,
+                  nn("rdfs:range"),
+                  nn(nameForModel(prop.type))
+                )
               );
 
               // SHACL
-              writer_constraints.addQuad(
-                DataFactory.quad(
+              constraintQuads.push(
+                quad(
                   nameNodeShacl,
                   nn("sh:property"),
-                  writer_constraints.blank([
+                  writer.blank([
                     {
                       predicate: nn("sh:path"),
                       object: propNameNode,
@@ -164,25 +176,28 @@ function createRdfEmitter(program: Program) {
               );
             } else if (prop.type.kind === "Union") {
               // PROPERTIES
-              writer_props.addQuad(
-                propNameNode,
-                nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                nn("owl:DatatypeProperty")
+              propQuads.push(
+                quad(
+                  propNameNode,
+                  nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                  nn("owl:DatatypeProperty")
+                )
               );
-              writer_props.addQuad(
-                propNameNode,
-                nn("rdfs:label"),
-                DataFactory.literal(prop.name)
+              propQuads.push(
+                quad(
+                  propNameNode,
+                  nn("rdfs:label"),
+                  DataFactory.literal(prop.name)
+                )
               );
 
               //SHACL
               const arr = [];
-              const writer_temp = new Writer({ prefixes });
 
               for (const variant of prop.type.variants.values()) {
                 if (variant.type.kind === "Model") {
                   arr.push(
-                    writer_temp.blank([
+                    writer.blank([
                       {
                         predicate: nn("sh:path"),
                         object: propNameNode,
@@ -199,7 +214,7 @@ function createRdfEmitter(program: Program) {
                   variant.type.kind === "Number"
                 ) {
                   arr.push(
-                    writer_temp.blank([
+                    writer.blank([
                       {
                         predicate: nn("sh:path"),
                         object: propNameNode,
@@ -213,65 +228,63 @@ function createRdfEmitter(program: Program) {
                 }
               }
 
-              writer_constraints.addQuad(
-                nameNodeShacl,
-                nn("sh:or"),
-                writer_constraints.list(arr)
+              constraintQuads.push(
+                quad(
+                  nameNodeShacl,
+                  nn("sh:or"),
+                  writer.list(arr) as any // error in n3 typing, this is supported
+                )
               );
             }
 
             const doc = getDoc(program, prop);
             if (doc) {
-              writer_props.addQuad(
-                propNameNode,
-                nn("rdfs:comment"),
-                DataFactory.literal(doc)
+              propQuads.push(
+                quad(propNameNode, nn("rdfs:comment"), DataFactory.literal(doc))
               );
             }
           }
         } else {
           // intrinsic
           const nameNode = nameForModel(m);
-          writer_props.addQuad(
-            nn(nameNode),
-            nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            nn("owl:DatatypeProperty")
+          propQuads.push(
+            quad(
+              nn(nameNode),
+              nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+              nn("owl:DatatypeProperty")
+            )
           );
-          writer_props.addQuad(
-            nn(nameNode),
-            nn("rdfs:label"),
-            DataFactory.literal(nameNode)
+          propQuads.push(
+            quad(nn(nameNode), nn("rdfs:label"), DataFactory.literal(nameNode))
           );
-          writer_props.addQuad(
-            nn(nameNode),
-            nn("rdfs:range"),
-            nn(intrinsicToRdf(intrinsicName))
+          propQuads.push(
+            quad(
+              nn(nameNode),
+              nn("rdfs:range"),
+              nn(intrinsicToRdf(intrinsicName))
+            )
           );
         }
       },
     });
 
-    writer_classes.end((err, result) => {
-      if (err) {
-        throw err;
-      }
+    writer.addQuad(nn("entityMarker"), nn("marker"), nn("marker"));
+    writer.addQuads(classQuads);
+    writer.addQuad(nn("propertyMarker"), nn("marker"), nn("marker"));
+    writer.addQuads(propQuads);
+    writer.addQuad(nn("shapeMarker"), nn("marker"), nn("marker"));
+    writer.addQuads(constraintQuads);
 
-      writer_props.end((err, result1) => {
-        if (err) {
-          throw err;
-        }
+    writer.end((err, result) => {
+      result = result
+        .replace(/^<entityMarker.*$/m, "\n# Entities")
+        .replace(/^<propertyMarker.*$/m, "\n# Properties")
+        .replace(/^<shapeMarker.*$/m, "\n# Shapes");
 
-        writer_constraints.end((err, result2) => {
-          if (err) {
-            throw err;
-          }
-
-          program.host.writeFile(
-            path.join(program.compilerOptions.outputPath!, "models.ttl"),
-            result + result1 + result2
-          );
-        });
-      });
+      program.host.writeFile(
+        path.join(program.compilerOptions.outputPath!, "models.ttl"),
+        result
+      );
     });
   }
 
@@ -341,7 +354,9 @@ function createRdfEmitter(program: Program) {
       case "zonedDateTime":
         return "xsd:dateTime";
       default:
-        throw new Error("xsd datatype not defined for instrinsic " + intrinsicName);
+        throw new Error(
+          "xsd datatype not defined for instrinsic " + intrinsicName
+        );
     }
   }
 
@@ -368,15 +383,7 @@ function createRdfEmitter(program: Program) {
     }
 
     if (!prefixes.hasOwnProperty(nsData.prefix)) {
-      writer_classes.addPrefix(
-        nsData.prefix,
-        nsData.namespace + getNameSpace(type) + "/"
-      );
-      writer_props.addPrefix(
-        nsData.prefix,
-        nsData.namespace + getNameSpace(type) + "/"
-      );
-      writer_constraints.addPrefix(
+      writer.addPrefix(
         nsData.prefix,
         nsData.namespace + getNameSpace(type) + "/"
       );
