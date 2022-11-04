@@ -63,7 +63,9 @@ function createRdfEmitter(program: Program) {
 
         // CLASS PART
         // Checks if Model is actual class (model Truck) or Model is a data property (model CUSIP is string)
-        if (m.properties.size != 0) {
+        const intrinsicName = getIntrinsicModelName(program, m);
+
+        if (!intrinsicName) {
           // Class
           const nameNode = nn(nameForModel(m));
           writer_classes.addQuad(
@@ -228,14 +230,8 @@ function createRdfEmitter(program: Program) {
             }
           }
         } else {
-          // TODO: ASK BRIAN: MODEL NAME RETURNED IS STRING AND NOT CUSIP??
-          // Data property
-          console.log(m.name);
-          console.log(nameForModel(m));
-          console.log(m.decorators);
-          console.log(getIntrinsicModelName(program, m));
-
-          const nameNode = m.name;
+          // intrinsic
+          const nameNode = nameForModel(m);
           writer_props.addQuad(
             nn(nameNode),
             nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
@@ -249,7 +245,7 @@ function createRdfEmitter(program: Program) {
           writer_props.addQuad(
             nn(nameNode),
             nn("rdfs:range"),
-            nn(nameForModel(m))
+            nn(intrinsicToRdf(intrinsicName))
           );
         }
       },
@@ -286,7 +282,7 @@ function createRdfEmitter(program: Program) {
   function nameForModel(model: Model) {
     const intrinsic = getIntrinsicModelName(program, model);
 
-    if (!intrinsic) {
+    if (!intrinsic || intrinsic !== model.name) {
       let ns = getNsForModel(model);
       if (model.name === "Array") {
         if (model.templateArguments != undefined) {
@@ -297,7 +293,11 @@ function createRdfEmitter(program: Program) {
       }
     }
 
-    switch (intrinsic) {
+    return intrinsicToRdf(intrinsic);
+  }
+
+  function intrinsicToRdf(intrinsicName: string) {
+    switch (intrinsicName) {
       case "boolean":
         return "xsd:boolean";
       case "bytes":
@@ -341,7 +341,7 @@ function createRdfEmitter(program: Program) {
       case "zonedDateTime":
         return "xsd:dateTime";
       default:
-        throw new Error("xsd datatype not defined for instrinsic " + intrinsic);
+        throw new Error("xsd datatype not defined for instrinsic " + intrinsicName);
     }
   }
 
