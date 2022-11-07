@@ -105,7 +105,6 @@ function createRdfEmitter(program: Program) {
           writeDecoratorsGeneral(program, m, nameNode, classQuads);
 
           // Class shape
-
           const nameNodeShacl = nn(nameForModelSHACL(m, "_NodeShape"));
           constraintQuadsClass.push(
             quad(
@@ -439,21 +438,21 @@ function createRdfEmitter(program: Program) {
     const minValue = getMinValue(program, m);
     if (minValue) {
       arrayQuads.push(
-        quad(object, nn("sh:minValue"), DataFactory.literal(minValue))
+        quad(object, nn("sh:minInclusive"), DataFactory.literal(minValue))
       );
     }
 
     const maxValue = getMaxValue(program, m);
     if (maxValue) {
       arrayQuads.push(
-        quad(object, nn("sh:maxValue"), DataFactory.literal(maxValue))
+        quad(object, nn("sh:maxInclusive"), DataFactory.literal(maxValue))
       );
     }
 
     const format = getFormat(program, m);
     if (format) {
       arrayQuads.push(
-        quad(object, nn("sh:format"), DataFactory.literal(format))
+        quad(object, nn("sh:pattern"), DataFactory.literal(format))
       );
     }
 
