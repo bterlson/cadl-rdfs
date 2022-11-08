@@ -34,6 +34,8 @@ import {
   getDeprecated,
   getFormat,
   isSecret,
+  Enum,
+  EnumMember,
 } from "@cadl-lang/compiler";
 import { NamedNode } from "rdf-js";
 
@@ -72,6 +74,7 @@ function createRdfEmitter(program: Program) {
     navigateProgram(program, {
       model(m) {
         if (m.namespace?.name === "Cadl") {
+          console.log("return");
           return;
         }
 
@@ -81,6 +84,7 @@ function createRdfEmitter(program: Program) {
         if (!intrinsicName) {
           // Class
           const nameNode = nn(nameForModel(m));
+
           classQuads.push(
             quad(
               nameNode,
@@ -246,6 +250,10 @@ function createRdfEmitter(program: Program) {
                   writer.list(arr) as any // error in n3 typing, this is supported
                 )
               );
+            } else if (prop.type.kind === "Enum") {
+              // TODO - property is enum
+              console.log("ENUM");
+              console.log(prop.name);
             }
 
             writeDecoratorsGeneral(program, prop, propNameNode, propQuads);
@@ -342,6 +350,10 @@ function createRdfEmitter(program: Program) {
             constraintQuadsProps
           );
         }
+      },
+      enum(e) {
+        console.log("ENUM!!!!!!");
+        console.log(e.kind);
       },
     });
 
@@ -601,7 +613,7 @@ interface RdfnsData {
 const rdfnsSymbol = lib.createStateSymbol("rdfns");
 const rdfnsDef = createDecoratorDefinition({
   name: "@rdfns",
-  target: ["Namespace", "Model"],
+  target: ["Namespace", "Model", "Enum"],
   args: [{ kind: "String" }, { kind: "String" }],
 } as const);
 
@@ -611,7 +623,7 @@ function getRdfnsState(program: Program): Map<Type, RdfnsData> {
 
 export function $rdfns(
   context: DecoratorContext,
-  target: Namespace | Model,
+  target: Namespace | Model | Enum,
   prefix: string,
   namespace: string
 ) {

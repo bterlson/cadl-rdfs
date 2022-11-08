@@ -6,6 +6,11 @@ using CadlRdf;
 
 namespace Resources;
 
+enum Direction {
+  North,
+  East,
+}
+
 @doc("a person")
 @summary("person summary")
 model Person {
