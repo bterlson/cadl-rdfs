@@ -139,7 +139,7 @@ function createRdfEmitter(program: Program) {
             const propNameNode = nn(nameForProperty(prop));
 
             if (prop.type.kind === "Model") {
-              // It is intersection
+              // TODO: It is intersection
               if (
                 prop.type.properties.size != 0 &&
                 checkIfIntersection(prop.type.properties) === true
