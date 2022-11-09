@@ -1,0 +1,21 @@
+import "cadl-rdf";
+
+using CadlRdf;
+
+@rdfns("ex", "http://example.org/")
+
+namespace Resources;
+
+model Person {
+  name: string;
+  age: int8;
+  modelField: Test1 & Test2;
+}
+
+model Test1{
+  model1: string;
+}
+
+model Test2{
+  model2: string;
+}
