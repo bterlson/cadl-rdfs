@@ -19,7 +19,22 @@ model Person {
 @doc("any kind of vehicle")
 model Vehicle {
   owner: Person;
+  myModel: myModel;
 }
+
+model Test1{
+  model1: "My Model 1";
+}
+
+model Test2{
+  model2: "My Model 2";
+}
+
+model myModel{
+  ...Test1,
+  ...Test2
+}
+
 
 @doc("a vehicle that moves people")
 model Car extends Vehicle {

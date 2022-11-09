@@ -34,6 +34,7 @@ import {
   getDeprecated,
   getFormat,
   isSecret,
+  createDiagnosticCollector,
 } from "@cadl-lang/compiler";
 import { NamedNode } from "rdf-js";
 
@@ -138,55 +139,72 @@ function createRdfEmitter(program: Program) {
             const propNameNode = nn(nameForProperty(prop));
 
             if (prop.type.kind === "Model") {
-              if (!checkIfDataProperty(prop.type)) {
+              // It is intersection
+              if (
+                prop.type.properties.size != 0 &&
+                checkIfIntersection(prop.type.properties) === true
+              ) {
+                console.log(prop.type.properties);
+                console.log("___________________");
+                /*
+                console.log(propNameNode);
+                for (var k of prop.type.properties) {
+                  console.log(k[1].name);
+                }*/
+              }
+
+              // Not intersection
+              else {
+                if (!checkIfDataProperty(prop.type)) {
+                  propQuads.push(
+                    quad(
+                      propNameNode,
+                      nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                      nn("owl:ObjectProperty")
+                    )
+                  );
+                } else {
+                  propQuads.push(
+                    quad(
+                      propNameNode,
+                      nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                      nn("owl:DatatypeProperty")
+                    )
+                  );
+                }
+
                 propQuads.push(
                   quad(
                     propNameNode,
-                    nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                    nn("owl:ObjectProperty")
+                    nn("rdfs:label"),
+                    DataFactory.literal(prop.name)
                   )
                 );
-              } else {
                 propQuads.push(
                   quad(
                     propNameNode,
-                    nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                    nn("owl:DatatypeProperty")
+                    nn("rdfs:range"),
+                    nn(nameForModel(prop.type))
+                  )
+                );
+
+                constraintQuadsClass.push(
+                  quad(
+                    nameNodeShacl,
+                    nn("sh:property"),
+                    writer.blank([
+                      {
+                        predicate: nn("sh:path"),
+                        object: propNameNode,
+                      },
+                      {
+                        predicate: nn("sh:datatype"),
+                        object: nn(nameForModel(prop.type)),
+                      },
+                    ])
                   )
                 );
               }
-
-              propQuads.push(
-                quad(
-                  propNameNode,
-                  nn("rdfs:label"),
-                  DataFactory.literal(prop.name)
-                )
-              );
-              propQuads.push(
-                quad(
-                  propNameNode,
-                  nn("rdfs:range"),
-                  nn(nameForModel(prop.type))
-                )
-              );
-
-              constraintQuadsClass.push(
-                quad(
-                  nameNodeShacl,
-                  nn("sh:property"),
-                  writer.blank([
-                    {
-                      predicate: nn("sh:path"),
-                      object: propNameNode,
-                    },
-                    {
-                      predicate: nn("sh:datatype"),
-                      object: nn(nameForModel(prop.type)),
-                    },
-                  ])
-                )
-              );
             } else if (prop.type.kind === "Union") {
               propQuads.push(
                 quad(
@@ -366,6 +384,21 @@ function createRdfEmitter(program: Program) {
         result
       );
     });
+  }
+
+  function checkIfIntersection(properties: Map<string, ModelProperty>) {
+    // Checks if this is intersection based on whether it contains only intrinsic types like string (then intersection) or it contains Models - which is just composition of models (then not intersection)
+
+    let types = new Set<string>();
+    for (var k of properties) {
+      types.add(k[1].type.kind);
+    }
+
+    if (types.has("Model")) {
+      return false;
+    } else {
+      return true;
+    }
   }
 
   function checkDecoratorsIfGeneral(prop: ModelProperty) {
