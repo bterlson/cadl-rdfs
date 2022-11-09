@@ -155,55 +155,67 @@ function createRdfEmitter(program: Program) {
 
               // Not intersection
               else {
-                if (!checkIfDataProperty(prop.type)) {
-                  propQuads.push(
-                    quad(
-                      propNameNode,
-                      nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                      nn("owl:ObjectProperty")
-                    )
-                  );
-                } else {
-                  propQuads.push(
+                // Check if data property was already defined (duplication happens with composite models)
+                if (
+                  checkIfQuadsContain(
+                    propQuads,
                     quad(
                       propNameNode,
                       nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
                       nn("owl:DatatypeProperty")
                     )
+                  ) == false
+                ) {
+                  if (!checkIfDataProperty(prop.type)) {
+                    propQuads.push(
+                      quad(
+                        propNameNode,
+                        nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                        nn("owl:ObjectProperty")
+                      )
+                    );
+                  } else {
+                    propQuads.push(
+                      quad(
+                        propNameNode,
+                        nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                        nn("owl:DatatypeProperty")
+                      )
+                    );
+                  }
+
+                  propQuads.push(
+                    quad(
+                      propNameNode,
+                      nn("rdfs:label"),
+                      DataFactory.literal(prop.name)
+                    )
+                  );
+                  propQuads.push(
+                    quad(
+                      propNameNode,
+                      nn("rdfs:range"),
+                      nn(nameForModel(prop.type))
+                    )
+                  );
+
+                  constraintQuadsClass.push(
+                    quad(
+                      nameNodeShacl,
+                      nn("sh:property"),
+                      writer.blank([
+                        {
+                          predicate: nn("sh:path"),
+                          object: propNameNode,
+                        },
+                        {
+                          predicate: nn("sh:datatype"),
+                          object: nn(nameForModel(prop.type)),
+                        },
+                      ])
+                    )
                   );
                 }
-
-                propQuads.push(
-                  quad(
-                    propNameNode,
-                    nn("rdfs:label"),
-                    DataFactory.literal(prop.name)
-                  )
-                );
-                propQuads.push(
-                  quad(
-                    propNameNode,
-                    nn("rdfs:range"),
-                    nn(nameForModel(prop.type))
-                  )
-                );
-
-                constraintQuadsClass.push(
-                  quad(
-                    nameNodeShacl,
-                    nn("sh:property"),
-                    writer.blank([
-                      {
-                        predicate: nn("sh:path"),
-                        object: propNameNode,
-                      },
-                      {
-                        predicate: nn("sh:datatype"),
-                        object: nn(nameForModel(prop.type)),
-                      },
-                    ])
-                  )
-                );
               }
             } else if (prop.type.kind === "Union") {
               propQuads.push(
@@ -384,6 +396,15 @@ function createRdfEmitter(program: Program) {
         result
       );
     });
+  }
+
+  function checkIfQuadsContain(quads: Quad[], quad: Quad) {
+    for (var q of quads) {
+      if (q.equals(quad)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   function checkIfIntersection(properties: Map<string, ModelProperty>) {

@@ -19,7 +19,6 @@ model Person {
 @doc("any kind of vehicle")
 model Vehicle {
   owner: Person;
-  myModel: myModel;
 }
 
 model Test1{
@@ -40,6 +39,7 @@ model myModel{
 model Car extends Vehicle {
   @summary("color summary")
   color: "red" | "blue";
+  myModel: myModel;
 }
 
 @doc("a truck for transporting cargo")
