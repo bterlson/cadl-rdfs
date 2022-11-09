@@ -156,17 +156,23 @@ function createRdfEmitter(program: Program) {
               // Not intersection
               else {
                 // Check if data property was already defined (duplication happens with composite models)
-                if (
-                  checkIfQuadsContain(
-                    propQuads,
-                    quad(
-                      propNameNode,
-                      nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                      nn("owl:DatatypeProperty")
-                    )
-                  ) == false
-                ) {
-                  if (!checkIfDataProperty(prop.type)) {
+
+                if (!checkIfDataProperty(prop.type)) {
+                  var duplicate = false;
+                  if (
+                    checkIfQuadsContain(
+                      propQuads,
+                      quad(
+                        propNameNode,
+                        nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                        nn("owl:ObjectProperty")
+                      )
+                    ) === true
+                  ) {
+                    duplicate = true;
+                  }
+
+                  if (duplicate === false) {
                     propQuads.push(
                       quad(
                         propNameNode,
@@ -174,7 +180,22 @@ function createRdfEmitter(program: Program) {
                         nn("owl:ObjectProperty")
                       )
                     );
-                  } else {
+                  }
+                } else {
+                  var duplicate = false;
+                  if (
+                    checkIfQuadsContain(
+                      propQuads,
+                      quad(
+                        propNameNode,
+                        nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                        nn("owl:DatatypeProperty")
+                      )
+                    ) === true
+                  ) {
+                    duplicate = true;
+                  }
+                  if (duplicate === false) {
                     propQuads.push(
                       quad(
                         propNameNode,
@@ -183,7 +204,9 @@ function createRdfEmitter(program: Program) {
                       )
                     );
                   }
+                }
 
+                if (duplicate === false) {
                   propQuads.push(
                     quad(
                       propNameNode,
