@@ -36,6 +36,7 @@ import {
   isSecret,
   Enum,
   EnumMember,
+  createDiagnosticCollector,
 } from "@cadl-lang/compiler";
 import { NamedNode } from "rdf-js";
 
@@ -65,6 +66,7 @@ function createRdfEmitter(program: Program) {
   const propQuads: Quad[] = [];
   const constraintQuadsClass: Quad[] = [];
   const constraintQuadsProps: Quad[] = [];
+  const namedIndividualsProps: Quad[] = [];
 
   return {
     emit,
@@ -72,9 +74,46 @@ function createRdfEmitter(program: Program) {
 
   function emit() {
     navigateProgram(program, {
+      enum(e) {
+        if (e.namespace?.name === "Cadl") {
+          return;
+        }
+
+        const nameNode = nn(nameForEnum(e));
+        classQuads.push(
+          quad(
+            nameNode,
+            nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+            nn("owl:Class")
+          )
+        );
+        classQuads.push(
+          quad(nameNode, nn("rdfs:label"), DataFactory.literal(e.name))
+        );
+
+        for (const member of e.members) {
+          const memberNameNode = nn(nameForEnumMember(e, member[0]));
+
+          namedIndividualsProps.push(
+            quad(
+              memberNameNode,
+              nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+              nameNode
+            )
+          );
+
+          namedIndividualsProps.push(
+            quad(
+              memberNameNode,
+              nn("rdfs:label"),
+              DataFactory.literal(member[0])
+            )
+          );
+        }
+      },
+
       model(m) {
         if (m.namespace?.name === "Cadl") {
-          console.log("return");
           return;
         }
 
@@ -253,7 +292,9 @@ function createRdfEmitter(program: Program) {
             } else if (prop.type.kind === "Enum") {
               // TODO - property is enum
               console.log("ENUM");
+              console.log(propNameNode);
               console.log(prop.name);
+              console.log(prop);
             }
 
             writeDecoratorsGeneral(program, prop, propNameNode, propQuads);
@@ -351,16 +392,14 @@ function createRdfEmitter(program: Program) {
           );
         }
       },
-      enum(e) {
-        console.log("ENUM!!!!!!");
-        console.log(e.kind);
-      },
     });
 
     writer.addQuad(nn("entityMarker"), nn("marker"), nn("marker"));
     writer.addQuads(classQuads);
     writer.addQuad(nn("propertyMarker"), nn("marker"), nn("marker"));
     writer.addQuads(propQuads);
+    writer.addQuad(nn("namedIndividualsMarker"), nn("marker"), nn("marker"));
+    writer.addQuads(namedIndividualsProps);
     writer.addQuad(nn("shapeClassMarker"), nn("marker"), nn("marker"));
     writer.addQuads(constraintQuadsClass);
     writer.addQuad(nn("shapePropMarker"), nn("marker"), nn("marker"));
@@ -370,6 +409,10 @@ function createRdfEmitter(program: Program) {
       result = result
         .replace(/^<entityMarker.*$/m, "\n# Entities")
         .replace(/^<propertyMarker.*$/m, "\n# Properties")
+        .replace(
+          /^<namedIndividualsMarker.*$/m,
+          "\n# Named Individual Definitions"
+        )
         .replace(/^<shapeClassMarker.*$/m, "\n# Shapes for Entities")
         .replace(/^<shapePropMarker.*$/m, "\n# Shapes for Properties");
 
@@ -504,6 +547,11 @@ function createRdfEmitter(program: Program) {
     return intrinsicToRdf(intrinsic);
   }
 
+  function nameForEnum(e: Enum) {
+    let ns = getNsForModel(e);
+    return ns.prefix + ":" + e.name;
+  }
+
   function intrinsicToRdf(intrinsicName: string) {
     switch (intrinsicName) {
       case "boolean":
@@ -569,8 +617,13 @@ function createRdfEmitter(program: Program) {
     return ns.prefix + ":" + prop.name;
   }
 
-  function getNsForModel(type: Model) {
-    let current: Model | Namespace | undefined = type;
+  function nameForEnumMember(e: Enum, s: String) {
+    let ns = getNsForModel(e);
+    return ns.prefix + ":" + s;
+  }
+
+  function getNsForModel(type: Model | Enum) {
+    let current: Model | Namespace | Enum | undefined = type;
     let nsData: RdfnsData | undefined;
 
     while (current && !nsData) {
@@ -593,7 +646,7 @@ function createRdfEmitter(program: Program) {
     return nsData;
   }
 
-  function getNameSpace(model: Model) {
+  function getNameSpace(model: Model | Enum) {
     let nm = model.namespace;
     let nmString = "";
     while (nm) {
