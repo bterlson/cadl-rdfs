@@ -6,6 +6,12 @@ using CadlRdf;
 
 namespace Resources;
 
+@doc("a direction")
+enum Direction {
+  NORTH,
+  EAST,
+}
+
 @doc("a person")
 @summary("person summary")
 model Person {
@@ -14,6 +20,7 @@ model Person {
   name: string;
   age: int8;
   vehicles: Vehicle[];
+  direction: Direction;
 }
 
 @doc("any kind of vehicle")
