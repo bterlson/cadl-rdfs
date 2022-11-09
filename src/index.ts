@@ -484,10 +484,17 @@ function createRdfEmitter(program: Program) {
       );
     }
 
+    const format = getFormat(program, m);
+    if (format) {
+      arrayQuads.push(
+        quad(object, nn("skos:example"), DataFactory.literal(format))
+      );
+    }
+
     const deprecated = getDeprecated(program, m);
     if (deprecated) {
       arrayQuads.push(
-        quad(object, nn("sh:deprecated"), DataFactory.literal(deprecated))
+        quad(object, nn("skos:historyNote"), DataFactory.literal(deprecated))
       );
     }
   }
@@ -523,13 +530,6 @@ function createRdfEmitter(program: Program) {
     if (maxValue) {
       arrayQuads.push(
         quad(object, nn("sh:maxInclusive"), DataFactory.literal(maxValue))
-      );
-    }
-
-    const format = getFormat(program, m);
-    if (format) {
-      arrayQuads.push(
-        quad(object, nn("sh:pattern"), DataFactory.literal(format))
       );
     }
 
