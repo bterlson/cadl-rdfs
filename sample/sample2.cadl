@@ -6,6 +6,8 @@ using CadlRdf;
 
 namespace Resources;
 
+@doc("hey")
+@deprecated(true)
 model Animal {
   species: string;
 }

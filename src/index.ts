@@ -472,9 +472,7 @@ function createRdfEmitter(program: Program) {
   ) {
     const doc = getDoc(program, m);
     if (doc) {
-      arrayQuads.push(
-        quad(object, nn("rdfs:comment"), DataFactory.literal(doc))
-      );
+      arrayQuads.push(quad(object, nn("skos:note"), DataFactory.literal(doc)));
     }
 
     const summary = getSummary(program, m);
@@ -494,7 +492,7 @@ function createRdfEmitter(program: Program) {
     const deprecated = getDeprecated(program, m);
     if (deprecated) {
       arrayQuads.push(
-        quad(object, nn("skos:historyNote"), DataFactory.literal(deprecated))
+        quad(object, nn("owl:deprecated"), DataFactory.literal(deprecated))
       );
     }
   }
