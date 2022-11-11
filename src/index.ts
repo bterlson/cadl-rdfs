@@ -480,7 +480,7 @@ function createRdfEmitter(program: Program) {
     const summary = getSummary(program, m);
     if (summary) {
       arrayQuads.push(
-        quad(object, nn("sh:summary"), DataFactory.literal(summary))
+        quad(object, nn("skos:definition"), DataFactory.literal(summary))
       );
     }
 

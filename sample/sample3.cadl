@@ -9,13 +9,13 @@ namespace Resources;
 model Person {
   name: string;
   age: int8;
-  modelField: Test1 & Test2;
+  modelField: ModelWithX & ModelWithY;
 }
 
-model Test1{
-  model1: string;
+model ModelWithX{
+  x: string;
 }
 
-model Test2{
-  model2: string;
+model ModelWithY{
+  y: string;
 }

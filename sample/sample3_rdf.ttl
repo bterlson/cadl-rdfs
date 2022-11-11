@@ -1,0 +1,69 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix skos: <http://www.w3.org/2004/02/skos/core#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#http>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+
+@prefix ex: <http://example.org/Resources/>.
+
+
+# Entities
+ex:Person a owl:Class;
+    rdfs:label "Person".
+ex: a owl:Class;
+    rdfs:label "".
+ex:ModelWithX a owl:Class;
+    rdfs:label "ModelWithX".
+ex:ModelWithY a owl:Class;
+    rdfs:label "ModelWithY".
+
+# Properties
+ex:name a owl:DatatypeProperty;
+    rdfs:label "name";
+    rdfs:range xsd:string.
+ex:age a owl:DatatypeProperty;
+    rdfs:label "age";
+    rdfs:range xsd:byte.
+ex:modelField a owl:ObjectProperty;
+    rdfs:label "modelField";
+    rdfs:range ex:.
+ex:x a owl:DatatypeProperty;
+    rdfs:label "x";
+    rdfs:range xsd:string.
+ex:y a owl:DatatypeProperty;
+    rdfs:label "y";
+    rdfs:range xsd:string.
+
+# Shapes for Entities
+ex:Person_NodeShape a sh:NodeShape;
+    rdfs:label "Shape for Person";
+    sh:targetClass ex:Person;
+    sh:property [
+  sh:path ex:name;
+  sh:datatype xsd:string
+], [
+  sh:path ex:age;
+  sh:datatype xsd:byte
+], [
+  sh:path ex:modelField;
+  sh:datatype ex:
+].
+ex:_NodeShape a sh:NodeShape;
+    rdfs:label "Shape for ";
+    sh:targetClass ex:;
+    sh:property [
+  sh:path ex:x;
+  sh:datatype xsd:string
+], [
+  sh:path ex:y;
+  sh:datatype xsd:string
+].
+ex:ModelWithX_NodeShape a sh:NodeShape;
+    rdfs:label "Shape for ModelWithX";
+    sh:targetClass ex:ModelWithX.
+ex:ModelWithY_NodeShape a sh:NodeShape;
+    rdfs:label "Shape for ModelWithY";
+    sh:targetClass ex:ModelWithY.
+
+# Shapes for Properties

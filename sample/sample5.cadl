@@ -12,15 +12,7 @@ model Person {
   modelField: TopModel;
 }
 
-model ModelWithX{
-  x: string;
-}
-
-model ModelWithY{
-  y: string;
-}
-
 model TopModel{
-  ...ModelWithX,
-  ...ModelWithY
+    x: string;
+    y: string;
 }
