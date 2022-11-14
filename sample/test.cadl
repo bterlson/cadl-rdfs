@@ -1,0 +1,3 @@
+model myTest {
+    name: string;
+}

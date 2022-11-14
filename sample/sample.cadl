@@ -1,38 +1,25 @@
 import "cadl-rdf";
 
+import "./metadata.js";
+import "./test.cadl";
 using CadlRdf;
 
 @rdfns("ex", "http://example.org/")
 
 namespace Resources;
 
-@doc("a person")
-@summary("person summary")
+
+enum Colors{
+  RED,
+  GREEN,
+  BLUE
+}
+
+@isPii(true)
 model Person {
-  @doc("Name prop of person")
-  @minLength(2)
+  test: myTest;
+  @isPii(true)
   name: string;
   age: int8;
-  vehicles: Vehicle[];
+  color: Colors;
 }
-
-@doc("any kind of vehicle")
-model Vehicle {
-  owner: Person;
-}
-
-@doc("a vehicle that moves people")
-model Car extends Vehicle {
-  @summary("color summary")
-  color: "red" | "blue";
-}
-
-@doc("a truck for transporting cargo")
-model Truck extends Vehicle {
-  @doc("how many cubic feet of space")
-  cargoSpace: int32;
-}
-
-@format("0378331000")
-@doc("a nine digit number")
-model CUSIP is string;

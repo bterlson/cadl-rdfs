@@ -291,10 +291,10 @@ function createRdfEmitter(program: Program) {
               );
             } else if (prop.type.kind === "Enum") {
               // TODO - property is enum
-              console.log("ENUM");
-              console.log(propNameNode);
-              console.log(prop.name);
-              console.log(prop);
+              //console.log("ENUM");
+              //console.log(propNameNode);
+              //console.log(prop.name);
+              //console.log(prop);
             }
 
             writeDecoratorsGeneral(program, prop, propNameNode, propQuads);
@@ -517,6 +517,12 @@ function createRdfEmitter(program: Program) {
         quad(object, nn("sh:secret"), DataFactory.literal("True"))
       );
     }
+
+    const isPii = checkForisPii(program, m);
+    console.log(isPii);
+    if (isPii) {
+      console.log(isPii);
+    }
   }
 
   function checkIfDataProperty(model: Model) {
@@ -682,5 +688,39 @@ export function $rdfns(
     namespace,
   });
 }
+
+function checkForisPii(program: Program, type: Type) {
+  let isPii = getisPiiState(program).get(type);
+  return isPii?.isPii;
+}
+
+interface isPii {
+  isPii: boolean;
+}
+
+function getisPiiState(program: Program): Map<Type, isPii> {
+  return program.stateMap(isPiiSymbol);
+}
+
+export function $isPii(
+  context: DecoratorContext,
+  target: Model | ModelProperty,
+  isPii: boolean
+) {
+  if (!isPiiDef.validate(context, target, [isPii])) {
+    return;
+  }
+
+  getisPiiState(context.program).set(target, {
+    isPii,
+  });
+}
+
+const isPiiSymbol = lib.createStateSymbol("isPii");
+const isPiiDef = createDecoratorDefinition({
+  name: "@isPii",
+  target: ["Model", "ModelProperty"],
+  args: [{ kind: "Boolean" }],
+} as const);
 
 export const namespace = "CadlRdf";
