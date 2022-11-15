@@ -691,11 +691,11 @@ export function $rdfns(
 
 function checkForisPii(program: Program, type: Type) {
   let isPii = getisPiiState(program).get(type);
-  return isPii?.isPii;
+  return isPii?.isPiiField;
 }
 
 interface isPii {
-  isPii: boolean;
+  isPiiField: boolean;
 }
 
 function getisPiiState(program: Program): Map<Type, isPii> {
@@ -705,14 +705,14 @@ function getisPiiState(program: Program): Map<Type, isPii> {
 export function $isPii(
   context: DecoratorContext,
   target: Model | ModelProperty,
-  isPii: boolean
+  isPiiField: boolean
 ) {
-  if (!isPiiDef.validate(context, target, [isPii])) {
+  if (!isPiiDef.validate(context, target, [isPiiField])) {
     return;
   }
 
   getisPiiState(context.program).set(target, {
-    isPii,
+    isPiiField,
   });
 }
 

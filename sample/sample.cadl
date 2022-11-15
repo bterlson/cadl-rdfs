@@ -17,7 +17,6 @@ enum Colors{
 
 @isPii(true)
 model Person {
-  test: myTest;
   @isPii(true)
   name: string;
   age: int8;
