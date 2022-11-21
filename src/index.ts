@@ -6,10 +6,13 @@ import {
   Variable,
   Literal,
   Store,
+  BlankNode,
 } from "n3";
 import path from "path";
 const nn = DataFactory.namedNode;
 const quad = DataFactory.quad;
+
+import { Md5 } from "ts-md5";
 
 import {
   createDecoratorDefinition,
@@ -80,6 +83,51 @@ function createRdfEmitter(program: Program) {
         }
 
         const nameNode = nn(nameForEnum(e));
+        const nameNodeCollection = nn(nameForEnumCollection(e));
+        const nameNodeCollectionHashed = nn(nameForEnumCollectionHashed(e));
+
+        classQuads.push(
+          quad(
+            nameNodeCollection,
+            nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+            nn("owl:Class")
+          )
+        );
+        classQuads.push(
+          quad(
+            nameNodeCollection,
+            nn("rdfs:label"),
+            DataFactory.literal(e.name + " Collection")
+          )
+        );
+
+        classQuads.push(
+          quad(nameNodeCollection, nn("rdfs:subclassOf"), nn("skos:Collection"))
+        );
+
+        classQuads.push(
+          quad(
+            nameNodeCollection,
+            nn("rdfs:subclassOf"),
+            writer.blank([
+              {
+                predicate: nn(
+                  "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+                ),
+                object: nn("owl:Restriction"),
+              },
+              {
+                predicate: nn("owl:onProperty"),
+                object: nn("skos:member"),
+              },
+              {
+                predicate: nn("owl:allValuesFrom"),
+                object: nameNode,
+              },
+            ])
+          )
+        );
+
         classQuads.push(
           quad(
             nameNode,
@@ -89,6 +137,14 @@ function createRdfEmitter(program: Program) {
         );
         classQuads.push(
           quad(nameNode, nn("rdfs:label"), DataFactory.literal(e.name))
+        );
+
+        classQuads.push(
+          quad(
+            nameNodeCollectionHashed,
+            nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+            nameNodeCollection
+          )
         );
 
         for (const member of e.members) {
@@ -108,6 +164,10 @@ function createRdfEmitter(program: Program) {
               nn("rdfs:label"),
               DataFactory.literal(member[0])
             )
+          );
+
+          classQuads.push(
+            quad(nameNodeCollectionHashed, nn("skos:member"), memberNameNode)
           );
         }
       },
@@ -294,7 +354,7 @@ function createRdfEmitter(program: Program) {
               //console.log("ENUM");
               //console.log(propNameNode);
               //console.log(prop.name);
-              //console.log(prop);
+              console.log(prop);
             }
 
             writeDecoratorsGeneral(program, prop, propNameNode, propQuads);
@@ -519,10 +579,10 @@ function createRdfEmitter(program: Program) {
     }
 
     const isPii = checkForisPii(program, m);
-    console.log(isPii);
+    /*console.log(isPii);
     if (isPii) {
       console.log(isPii);
-    }
+    }*/
   }
 
   function checkIfDataProperty(model: Model) {
@@ -549,6 +609,18 @@ function createRdfEmitter(program: Program) {
   function nameForEnum(e: Enum) {
     let ns = getNsForModel(e);
     return ns.prefix + ":" + e.name;
+  }
+
+  function nameForEnumCollection(e: Enum) {
+    let ns = getNsForModel(e);
+    return ns.prefix + ":" + e.name + "Collection";
+  }
+
+  function nameForEnumCollectionHashed(e: Enum) {
+    let ns = getNsForModel(e);
+    return (
+      ns.prefix + ":" + e.name + "Collection" + "_" + hashTheObject(e.members)
+    );
   }
 
   function intrinsicToRdf(intrinsicName: string) {
@@ -618,7 +690,7 @@ function createRdfEmitter(program: Program) {
 
   function nameForEnumMember(e: Enum, s: String) {
     let ns = getNsForModel(e);
-    return ns.prefix + ":" + s;
+    return ns.prefix + ":" + "_" + e.name + "_" + s;
   }
 
   function getNsForModel(type: Model | Enum) {
@@ -654,6 +726,12 @@ function createRdfEmitter(program: Program) {
     }
 
     return nmString.substring(1, nmString.length - 1);
+  }
+
+  function hashTheObject(
+    obj: Map<string, EnumMember>[] | Map<string, EnumMember>
+  ) {
+    return Md5.hashStr(JSON.stringify(obj));
   }
 }
 
