@@ -97,7 +97,9 @@ function createRdfEmitter(program: Program) {
           quad(
             nameNodeCollection,
             nn("rdfs:label"),
-            DataFactory.literal(e.name + " Collection")
+            DataFactory.literal(
+              e.name.split(/(?=[A-Z])/).join(" ") + " Collection"
+            )
           )
         );
 
@@ -136,7 +138,11 @@ function createRdfEmitter(program: Program) {
           )
         );
         classQuads.push(
-          quad(nameNode, nn("rdfs:label"), DataFactory.literal(e.name))
+          quad(
+            nameNode,
+            nn("rdfs:label"),
+            DataFactory.literal(e.name.split(/(?=[A-Z])/).join(" "))
+          )
         );
 
         classQuads.push(
@@ -165,6 +171,16 @@ function createRdfEmitter(program: Program) {
               DataFactory.literal(member[0])
             )
           );
+
+          if (member[1].value) {
+            namedIndividualsProps.push(
+              quad(
+                memberNameNode,
+                nn(getEnumValueType(member[1].value)),
+                DataFactory.literal(member[1].value)
+              )
+            );
+          }
 
           classQuads.push(
             quad(nameNodeCollectionHashed, nn("skos:member"), memberNameNode)
@@ -350,11 +366,43 @@ function createRdfEmitter(program: Program) {
                 )
               );
             } else if (prop.type.kind === "Enum") {
-              // TODO - property is enum
-              //console.log("ENUM");
-              //console.log(propNameNode);
-              //console.log(prop.name);
-              console.log(prop);
+              classQuads.push(
+                quad(
+                  nameNode,
+                  nn("rdfs:subClassOf"),
+                  writer.blank([
+                    {
+                      predicate: nn("rdf:type"),
+                      object: nn("owl:Restriction"),
+                    },
+                    {
+                      predicate: nn("owl:onProperty"),
+                      object: propNameNode,
+                    },
+                    {
+                      predicate: nn("owl:someValuesFrom"),
+                      object: nn(nameForEnum(prop.type)),
+                    },
+                  ])
+                )
+              );
+
+              constraintQuadsClass.push(
+                quad(
+                  nameNodeShacl,
+                  nn("sh:property"),
+                  writer.blank([
+                    {
+                      predicate: nn("sh:path"),
+                      object: nn("TODO"),
+                    },
+                    {
+                      predicate: nn("sh:class"),
+                      object: nn(nameForEnumCollectionHashed(prop.type)),
+                    },
+                  ])
+                )
+              );
             }
 
             writeDecoratorsGeneral(program, prop, propNameNode, propQuads);
@@ -618,9 +666,7 @@ function createRdfEmitter(program: Program) {
 
   function nameForEnumCollectionHashed(e: Enum) {
     let ns = getNsForModel(e);
-    return (
-      ns.prefix + ":" + e.name + "Collection" + "_" + hashTheObject(e.members)
-    );
+    return ns.prefix + ":" + e.name + "Collection" + "_" + hashTheObject(e);
   }
 
   function intrinsicToRdf(intrinsicName: string) {
@@ -690,7 +736,7 @@ function createRdfEmitter(program: Program) {
 
   function nameForEnumMember(e: Enum, s: String) {
     let ns = getNsForModel(e);
-    return ns.prefix + ":" + "_" + e.name + "_" + s;
+    return ns.prefix + ":" + e.name + "_" + s;
   }
 
   function getNsForModel(type: Model | Enum) {
@@ -728,10 +774,32 @@ function createRdfEmitter(program: Program) {
     return nmString.substring(1, nmString.length - 1);
   }
 
-  function hashTheObject(
-    obj: Map<string, EnumMember>[] | Map<string, EnumMember>
-  ) {
-    return Md5.hashStr(JSON.stringify(obj));
+  // TODO: Improve but works for now
+  function hashTheObject(obj: Enum) {
+    let s = "";
+    for (let [key, value] of obj.members) {
+      s = s + key.toString;
+      if (value.value) {
+        s = s + value.value;
+      }
+    }
+    return Md5.hashStr(JSON.stringify(s));
+  }
+
+  function getEnumValueType(obj: any) {
+    let ns = getNsForModel(obj);
+
+    if (typeof obj === "string") {
+      return ns.prefix + ":" + "stringValue";
+    } else if (typeof obj === "number") {
+      if (obj % 1 != 0) {
+        return ns.prefix + ":" + "decimalValue";
+      } else {
+        return ns.prefix + ":" + "numberValue";
+      }
+    } else {
+      return ns.prefix + ":" + "anyValue";
+    }
   }
 }
 

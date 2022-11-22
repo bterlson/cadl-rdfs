@@ -1,0 +1,28 @@
+import "cadl-rdf";
+using CadlRdf;
+
+@rdfns("ex", "http://example.org/")
+
+namespace Resources;
+
+
+enum Direction{
+  "North",
+  "East",
+  "South",
+  "West"
+}
+
+enum DirectionWithValues{
+    North: "north",
+    East: 10,
+    South: 5.55,
+    West: "west",
+}
+
+
+model Person {
+  name: string;
+  direction: Direction;
+  direction2: DirectionWithValues;
+}
