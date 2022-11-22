@@ -13,16 +13,32 @@ enum Direction{
   "West"
 }
 
-enum DirectionWithValues{
+/*enum DirectionWithValues{
     North: "north",
     East: 10,
     South: 5.55,
     West: "west",
 }
 
+enum Versions{
+    V1: 1,
+    V2: 2,
+}*/
+
+enum DirectionExt
+{
+    ...Direction,
+    "North East",
+    "North West",
+    "South East",
+    "South West",
+}
+
 
 model Person {
   name: string;
+  //version: Versions;
   direction: Direction;
-  direction2: DirectionWithValues;
+  //direction2: DirectionWithValues;
+  direction3: DirectionExt;
 }

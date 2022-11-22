@@ -154,37 +154,69 @@ function createRdfEmitter(program: Program) {
         );
 
         for (const member of e.members) {
-          const memberNameNode = nn(nameForEnumMember(e, member[0]));
-
-          namedIndividualsProps.push(
-            quad(
-              memberNameNode,
-              nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-              nameNode
-            )
+          const memberNameNode = nn(
+            nameForEnumMember(e, member[0].replace(/\s/g, ""))
           );
 
-          namedIndividualsProps.push(
-            quad(
-              memberNameNode,
-              nn("rdfs:label"),
-              DataFactory.literal(member[0])
-            )
-          );
+          //COMPOSITE
+          if (member[1].sourceMember != undefined) {
+            let obj = nn(
+              nameForEnumCollectionHashed(member[1].sourceMember.enum)
+            );
 
-          if (member[1].value) {
+            //Check if enum definiton is already there to prevent duplicate values
+            if (
+              !classQuads.some(
+                (i) =>
+                  JSON.stringify(i.subject) ===
+                    JSON.stringify(nameNodeCollectionHashed) &&
+                  JSON.stringify(i.predicate) ===
+                    JSON.stringify(nn(getNameSpaceForWord(e, "contains"))) &&
+                  JSON.stringify(i.object) === JSON.stringify(obj)
+              )
+            ) {
+              classQuads.push(
+                quad(
+                  nameNodeCollectionHashed,
+                  nn(getNameSpaceForWord(e, "contains")),
+                  obj
+                )
+              );
+            }
+          }
+
+          // NOT COMPOSITE
+          else {
             namedIndividualsProps.push(
               quad(
                 memberNameNode,
-                nn(getEnumValueType(member[1].value)),
-                DataFactory.literal(member[1].value)
+                nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+                nameNode
               )
             );
-          }
 
-          classQuads.push(
-            quad(nameNodeCollectionHashed, nn("skos:member"), memberNameNode)
-          );
+            namedIndividualsProps.push(
+              quad(
+                memberNameNode,
+                nn("rdfs:label"),
+                DataFactory.literal(member[0])
+              )
+            );
+
+            if (member[1].value) {
+              namedIndividualsProps.push(
+                quad(
+                  memberNameNode,
+                  nn(getEnumValueType(member[1].value)),
+                  DataFactory.literal(member[1].value)
+                )
+              );
+            }
+
+            classQuads.push(
+              quad(nameNodeCollectionHashed, nn("skos:member"), memberNameNode)
+            );
+          }
         }
       },
 
@@ -800,6 +832,11 @@ function createRdfEmitter(program: Program) {
     } else {
       return ns.prefix + ":" + "anyValue";
     }
+  }
+
+  function getNameSpaceForWord(e: Enum, s: String) {
+    let ns = getNsForModel(e);
+    return ns.prefix + ":" + s;
   }
 }
 
