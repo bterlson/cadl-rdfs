@@ -9,6 +9,7 @@ import {
   BlankNode,
 } from "n3";
 import path from "path";
+
 const nn = DataFactory.namedNode;
 const quad = DataFactory.quad;
 
@@ -682,9 +683,9 @@ function createRdfEmitter(program: Program) {
       );
     }
 
-    const isPii = checkForisPii(program, m);
-    /*console.log(isPii);
-    if (isPii) {
+    const isPii = checkForPiiData(program, m);
+    console.log(isPii);
+    /*if (isPii) {
       console.log(isPii);
     }*/
   }
@@ -896,30 +897,30 @@ export function $rdfns(
   });
 }
 
-function checkForisPii(program: Program, type: Type) {
-  let isPii = getisPiiState(program).get(type);
-  return isPii?.isPiiField;
+function checkForPiiData(program: Program, type: Type) {
+  let piiData = getisPiiState(program).get(type);
+  return piiData?.isPii;
 }
 
-interface isPii {
-  isPiiField: boolean;
+interface PiiData {
+  isPii: boolean;
 }
 
-function getisPiiState(program: Program): Map<Type, isPii> {
+function getisPiiState(program: Program): Map<Type, PiiData> {
   return program.stateMap(isPiiSymbol);
 }
 
-export function $isPii(
+export function $PiiData(
   context: DecoratorContext,
   target: Model | ModelProperty,
-  isPiiField: boolean
+  isPii: boolean
 ) {
-  if (!isPiiDef.validate(context, target, [isPiiField])) {
+  if (!isPiiDef.validate(context, target, [isPii])) {
     return;
   }
 
   getisPiiState(context.program).set(target, {
-    isPiiField,
+    isPii,
   });
 }
 

@@ -1,4 +1,5 @@
 import "cadl-rdf";
+import "./metadata.js";
 using CadlRdf;
 
 @rdfns("ex", "http://example.org/")
@@ -12,6 +13,7 @@ enum Colors{
   BLUE
 }
 
+@isPii(true)
 model Person {
   name: string;
   color: Colors;
