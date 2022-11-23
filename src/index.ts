@@ -898,7 +898,7 @@ export function $rdfns(
 }
 
 function checkForPiiData(program: Program, type: Type) {
-  let piiData = getisPiiState(program).get(type);
+  let piiData = getPiiDataState(program).get(type);
   return piiData?.isPii;
 }
 
@@ -906,7 +906,7 @@ interface PiiData {
   isPii: boolean;
 }
 
-function getisPiiState(program: Program): Map<Type, PiiData> {
+function getPiiDataState(program: Program): Map<Type, PiiData> {
   return program.stateMap(isPiiSymbol);
 }
 
@@ -919,7 +919,7 @@ export function $PiiData(
     return;
   }
 
-  getisPiiState(context.program).set(target, {
+  getPiiDataState(context.program).set(target, {
     isPii,
   });
 }
