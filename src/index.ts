@@ -338,6 +338,27 @@ function createRdfEmitter(program: Program) {
                   ])
                 )
               );
+
+              /*classQuads.push(
+                quad(
+                  nameNode,
+                  nn("rdfs:subClassOf"),
+                  writer.blank([
+                    {
+                      predicate: nn("rdf:type"),
+                      object: nn("owl:Restriction"),
+                    },
+                    {
+                      predicate: nn("owl:onProperty"),
+                      object: propNameNode,
+                    },
+                    {
+                      predicate: nn("owl:someValuesFrom"),
+                      object: nn(nameForModel(prop.type)),
+                    },
+                  ])
+                )
+              );*/
             } else if (prop.type.kind === "Union") {
               propQuads.push(
                 quad(
@@ -426,7 +447,10 @@ function createRdfEmitter(program: Program) {
                   writer.blank([
                     {
                       predicate: nn("sh:path"),
-                      object: nn("TODO"),
+                      object: writer.list([
+                        propNameNode,
+                        nn("skos:member"),
+                      ]) as any,
                     },
                     {
                       predicate: nn("sh:class"),
