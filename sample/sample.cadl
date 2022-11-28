@@ -6,7 +6,6 @@ using CadlRdf;
 
 namespace Resources;
 
-
 enum Colors{
   RED,
   GREEN,
