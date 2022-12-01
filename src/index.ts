@@ -83,142 +83,7 @@ function createRdfEmitter(program: Program) {
           return;
         }
 
-        const nameNode = nn(nameForEnum(e));
-        const nameNodeCollection = nn(nameForEnumCollection(e));
-        const nameNodeCollectionHashed = nn(nameForEnumCollectionHashed(e));
-
-        classQuads.push(
-          quad(
-            nameNodeCollection,
-            nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            nn("owl:Class")
-          )
-        );
-        classQuads.push(
-          quad(
-            nameNodeCollection,
-            nn("rdfs:label"),
-            DataFactory.literal(
-              e.name.split(/(?=[A-Z])/).join(" ") + " Collection"
-            )
-          )
-        );
-
-        classQuads.push(
-          quad(nameNodeCollection, nn("rdfs:subclassOf"), nn("skos:Collection"))
-        );
-
-        classQuads.push(
-          quad(
-            nameNodeCollection,
-            nn("rdfs:subclassOf"),
-            writer.blank([
-              {
-                predicate: nn(
-                  "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-                ),
-                object: nn("owl:Restriction"),
-              },
-              {
-                predicate: nn("owl:onProperty"),
-                object: nn("skos:member"),
-              },
-              {
-                predicate: nn("owl:allValuesFrom"),
-                object: nameNode,
-              },
-            ])
-          )
-        );
-
-        classQuads.push(
-          quad(
-            nameNode,
-            nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            nn("owl:Class")
-          )
-        );
-        classQuads.push(
-          quad(
-            nameNode,
-            nn("rdfs:label"),
-            DataFactory.literal(e.name.split(/(?=[A-Z])/).join(" "))
-          )
-        );
-
-        classQuads.push(
-          quad(
-            nameNodeCollectionHashed,
-            nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-            nameNodeCollection
-          )
-        );
-
-        for (const member of e.members) {
-          const memberNameNode = nn(
-            nameForEnumMember(e, member[0].replace(/\s/g, ""))
-          );
-
-          //COMPOSITE
-          if (member[1].sourceMember != undefined) {
-            let obj = nn(
-              nameForEnumCollectionHashed(member[1].sourceMember.enum)
-            );
-
-            //Check if enum definiton is already there to prevent duplicate values
-            if (
-              !classQuads.some(
-                (i) =>
-                  JSON.stringify(i.subject) ===
-                    JSON.stringify(nameNodeCollectionHashed) &&
-                  JSON.stringify(i.predicate) ===
-                    JSON.stringify(nn(getNameSpaceForWord(e, "contains"))) &&
-                  JSON.stringify(i.object) === JSON.stringify(obj)
-              )
-            ) {
-              classQuads.push(
-                quad(
-                  nameNodeCollectionHashed,
-                  nn(getNameSpaceForWord(e, "contains")),
-                  obj
-                )
-              );
-            }
-          }
-
-          // NOT COMPOSITE
-          else {
-            namedIndividualsProps.push(
-              quad(
-                memberNameNode,
-                nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-                nameNode
-              )
-            );
-
-            namedIndividualsProps.push(
-              quad(
-                memberNameNode,
-                nn("rdfs:label"),
-                DataFactory.literal(member[0])
-              )
-            );
-
-            if (member[1].value) {
-              namedIndividualsProps.push(
-                quad(
-                  memberNameNode,
-                  nn(getEnumValueType(member[1].value)),
-                  DataFactory.literal(member[1].value)
-                )
-              );
-            }
-
-            classQuads.push(
-              quad(nameNodeCollectionHashed, nn("skos:member"), memberNameNode)
-            );
-          }
-        }
+        processEnum(e);
       },
 
       model(m) {
@@ -507,11 +372,15 @@ function createRdfEmitter(program: Program) {
             quad(
               nn(nameNode),
               nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
-              nn("owl:DatatypeProperty")
+              nn("owl:Property")
             )
           );
           propQuads.push(
-            quad(nn(nameNode), nn("rdfs:label"), DataFactory.literal(nameNode))
+            quad(
+              nn(nameNode),
+              nn("rdfs:label"),
+              DataFactory.literal(m.name.split(/(?=[A-Z])/).join(" "))
+            )
           );
           propQuads.push(
             quad(
@@ -607,6 +476,135 @@ function createRdfEmitter(program: Program) {
     }
   }
 
+  function processEnum(e: Enum) {
+    const nameNode = nn(nameForEnum(e));
+    const nameNodeCollection = nn(nameForEnumCollection(e));
+    const nameNodeCollectionHashed = nn(nameForEnumCollectionHashed(e));
+
+    classQuads.push(
+      quad(
+        nameNodeCollection,
+        nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+        nn("owl:Class")
+      )
+    );
+    classQuads.push(
+      quad(
+        nameNodeCollection,
+        nn("rdfs:label"),
+        DataFactory.literal(e.name.split(/(?=[A-Z])/).join(" ") + " Collection")
+      )
+    );
+
+    classQuads.push(
+      quad(nameNodeCollection, nn("rdfs:subclassOf"), nn("skos:Collection"))
+    );
+
+    classQuads.push(
+      quad(
+        nameNodeCollection,
+        nn("rdfs:subclassOf"),
+        writer.blank([
+          {
+            predicate: nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+            object: nn("owl:Restriction"),
+          },
+          {
+            predicate: nn("owl:onProperty"),
+            object: nn("skos:member"),
+          },
+          {
+            predicate: nn("owl:allValuesFrom"),
+            object: nameNode,
+          },
+        ])
+      )
+    );
+
+    classQuads.push(
+      quad(
+        nameNode,
+        nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+        nn("owl:Class")
+      )
+    );
+    classQuads.push(
+      quad(
+        nameNode,
+        nn("rdfs:label"),
+        DataFactory.literal(e.name.split(/(?=[A-Z])/).join(" "))
+      )
+    );
+
+    classQuads.push(
+      quad(
+        nameNodeCollectionHashed,
+        nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+        nameNodeCollection
+      )
+    );
+
+    for (const member of e.members) {
+      const memberNameNode = nn(
+        nameForEnumMember(e, member[0].replace(/\s/g, ""))
+      );
+
+      //COMPOSITE
+      if (member[1].sourceMember != undefined) {
+        let obj = nn(nameForEnumCollectionHashed(member[1].sourceMember.enum));
+
+        //Check if enum definiton is already there to prevent duplicate values
+        if (
+          !classQuads.some(
+            (i) =>
+              JSON.stringify(i.subject) ===
+                JSON.stringify(nameNodeCollectionHashed) &&
+              JSON.stringify(i.predicate) ===
+                JSON.stringify(nn(getNameSpaceForWord(e, "contains"))) &&
+              JSON.stringify(i.object) === JSON.stringify(obj)
+          )
+        ) {
+          classQuads.push(
+            quad(
+              nameNodeCollectionHashed,
+              nn(getNameSpaceForWord(e, "contains")),
+              obj
+            )
+          );
+        }
+      }
+
+      // NOT COMPOSITE
+      else {
+        namedIndividualsProps.push(
+          quad(
+            memberNameNode,
+            nn("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
+            nameNode
+          )
+        );
+
+        namedIndividualsProps.push(
+          quad(memberNameNode, nn("rdfs:label"), DataFactory.literal(member[0]))
+        );
+
+        if (member[1].value) {
+          namedIndividualsProps.push(
+            quad(
+              memberNameNode,
+              nn(getEnumValueType(member[1].value)),
+              DataFactory.literal(member[1].value)
+            )
+          );
+        }
+
+        classQuads.push(
+          quad(nameNodeCollectionHashed, nn("skos:member"), memberNameNode)
+        );
+      }
+    }
+  }
+
   function writeDecoratorsGeneral(
     program: Program,
     m: Model | ModelProperty,
@@ -615,23 +613,30 @@ function createRdfEmitter(program: Program) {
   ) {
     const doc = getDoc(program, m);
     if (doc) {
-      arrayQuads.push(
-        quad(object, nn("rdfs:comment"), DataFactory.literal(doc))
-      );
+      arrayQuads.push(quad(object, nn("skos:note"), DataFactory.literal(doc)));
     }
-
     const summary = getSummary(program, m);
     if (summary) {
       arrayQuads.push(
-        quad(object, nn("sh:summary"), DataFactory.literal(summary))
+        quad(object, nn("skos:definition"), DataFactory.literal(summary))
       );
     }
-
+    const format = getFormat(program, m);
+    if (format) {
+      arrayQuads.push(
+        quad(object, nn("skos:example"), DataFactory.literal(format))
+      );
+    }
     const deprecated = getDeprecated(program, m);
     if (deprecated) {
       arrayQuads.push(
-        quad(object, nn("sh:deprecated"), DataFactory.literal(deprecated))
+        quad(object, nn("owl:deprecated"), DataFactory.literal(deprecated))
       );
+    }
+
+    const knownValues = getKnownValues(program, m);
+    if (knownValues) {
+      processEnum(knownValues);
     }
   }
 
