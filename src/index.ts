@@ -684,7 +684,7 @@ function createRdfEmitter(program: Program) {
     }
 
     const isPii = checkForPiiData(program, m);
-    console.log(isPii);
+    //console.log(isPii);
     /*if (isPii) {
       console.log(isPii);
     }*/
