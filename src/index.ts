@@ -692,6 +692,7 @@ function createRdfEmitter(program: Program) {
     //console.log(isPii);
     /*if (isPii) {
       console.log(isPii);
+      
     }*/
   }
 
