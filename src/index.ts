@@ -688,12 +688,16 @@ function createRdfEmitter(program: Program) {
       );
     }
 
-    const isPii = checkForPiiData(program, m);
-    //console.log(isPii);
-    /*if (isPii) {
-      console.log(isPii);
-      
-    }*/
+    for (const decorator of m.decorators) {
+      if (decorator.decorator.name === "$isPii") {
+        for (const arg of decorator.args) {
+          // TOOD: what is the predicate?
+          arrayQuads.push(
+            quad(object, nn("sh:ISPII"), DataFactory.literal("True"))
+          );
+        }
+      }
+    }
   }
 
   function checkIfDataProperty(model: Model) {
@@ -902,39 +906,5 @@ export function $rdfns(
     namespace,
   });
 }
-
-function checkForPiiData(program: Program, type: Type) {
-  let piiData = getPiiDataState(program).get(type);
-  return piiData?.isPii;
-}
-
-interface PiiData {
-  isPii: boolean;
-}
-
-function getPiiDataState(program: Program): Map<Type, PiiData> {
-  return program.stateMap(isPiiSymbol);
-}
-
-export function $PiiData(
-  context: DecoratorContext,
-  target: Model | ModelProperty,
-  isPii: boolean
-) {
-  if (!isPiiDef.validate(context, target, [isPii])) {
-    return;
-  }
-
-  getPiiDataState(context.program).set(target, {
-    isPii,
-  });
-}
-
-const isPiiSymbol = lib.createStateSymbol("isPii");
-const isPiiDef = createDecoratorDefinition({
-  name: "@isPii",
-  target: ["Model", "ModelProperty"],
-  args: [{ kind: "Boolean" }],
-} as const);
 
 export const namespace = "CadlRdf";
