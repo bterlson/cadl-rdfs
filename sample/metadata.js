@@ -1,20 +1,14 @@
-import { Model, DecoratorContext } from "@cadl-lang/compiler";
-import { $extension, getExtension } from "@cadl-lang/openapi";
+/** @typedef { import("@cadl-lang/compiler").DecoratorContext} DecoratorContext */
+/** @typedef { import("@cadl-lang/compiler").ModelType} ModelType */
+import { $extension } from "@cadl-lang/openapi";
 
 
 /**
  * 
  * @param {DecoratorContext} context 
- * @param {Model} target 
+ * @param {ModelType} target 
  * @param {bool} isPii 
  */
-export function $isPii(context,target,isPii)
-{
+export function $isPii(context,target,isPii) {
     context.call($extension, target, "x-ms-pii", isPii ?? true);
-}
-
-
-export function getPii(target: Type) {
-    const extensions = getExtension(target);
-    return extensions.get("x-ms-pii") ?? false;
 }
