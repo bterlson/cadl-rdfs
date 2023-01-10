@@ -12,9 +12,9 @@ enum Colors{
   BLUE
 }
 
-@isPii(true)
+@isPii
 model Person {
-  @isPii(true)
+  @isPii
   name: string;
   color: Colors;
 }

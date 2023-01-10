@@ -688,15 +688,10 @@ function createRdfEmitter(program: Program) {
       );
     }
 
-    for (const decorator of m.decorators) {
-      if (decorator.decorator.name === "$isPii") {
-        for (const arg of decorator.args) {
-          // TOOD: what is the predicate?
-          arrayQuads.push(
-            quad(object, nn("sh:ISPII"), DataFactory.literal("True"))
-          );
-        }
-      }
+    if (getPii(m)) {
+      arrayQuads.push(
+        quad(object, nn("sh:ISPII"), DataFactory.literal("True"))
+      );
     }
   }
 
