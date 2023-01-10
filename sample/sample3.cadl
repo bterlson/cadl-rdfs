@@ -1,11 +1,8 @@
-enum OperationStateValues
-{
+enum OperationStateValues {
     Running,
     Completed,
     Failed,
 }
 
-@knownValues (OperationStateValues)
-model OperationState is string;
-
-
+@knownValues(OperationStateValues)
+scalar OperationState extends string;

@@ -2,15 +2,13 @@ import "cadl-rdf";
 using CadlRdf;
 
 @rdfns("ex", "http://example.org/")
-
 namespace Resources;
 
-
-enum Direction{
+enum Direction {
   "North",
   "East",
   "South",
-  "West"
+  "West",
 }
 
 /*enum DirectionWithValues{
@@ -25,15 +23,13 @@ enum Versions{
     V2: 2,
 }*/
 
-enum DirectionExt
-{
-    ...Direction,
-    "North East",
-    "North West",
-    "South East",
-    "South West",
+enum DirectionExt {
+  ...Direction,
+  "North East",
+  "North West",
+  "South East",
+  "South West",
 }
-
 
 model Person {
   name: string;

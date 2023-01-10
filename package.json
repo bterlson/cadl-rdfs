@@ -4,8 +4,9 @@
   "main": "dist/index.js",
   "cadlMain": "lib/rdf.cadl",
   "dependencies": {
-    "@cadl-lang/openapi3": "^0.15.0",
-    "@cadl-lang/rest": "^0.17.0",
+    "@cadl-lang/compiler": "^0.38.5",
+    "@cadl-lang/openapi3": "^0.38.0",
+    "@cadl-lang/rest": "^0.38.0",
     "n3": "^1.16.2",
     "ts-md5": "^1.3.1"
   },
