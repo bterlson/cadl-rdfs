@@ -267,27 +267,6 @@ function createRdfEmitter(program: Program) {
                 ])
               )
             );
-
-            /*classQuads.push(
-                quad(
-                  nameNode,
-                  nn("rdfs:subClassOf"),
-                  writer.blank([
-                    {
-                      predicate: nn("rdf:type"),
-                      object: nn("owl:Restriction"),
-                    },
-                    {
-                      predicate: nn("owl:onProperty"),
-                      object: propNameNode,
-                    },
-                    {
-                      predicate: nn("owl:someValuesFrom"),
-                      object: nn(nameForModel(prop.type)),
-                    },
-                  ])
-                )
-              );*/
           } else if (prop.type.kind === "Union") {
             propQuads.push(
               quad(
