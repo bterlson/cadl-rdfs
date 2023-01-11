@@ -1,0 +1,8 @@
+enum OperationStateValues {
+    Running,
+    Completed,
+    Failed,
+}
+
+@knownValues(OperationStateValues)
+scalar OperationState extends string;

@@ -1,1 +1,13 @@
 import "../dist/index.js";
+namespace CadlRdf;
+
+extern dec rdfns(
+  target:
+    | object
+    | Cadl.Reflection.Namespace
+    | Cadl.Reflection.Enum
+    | numeric
+    | string,
+  prefix: string,
+  ns: string
+);
