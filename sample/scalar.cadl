@@ -1,0 +1,7 @@
+import "cadl-rdf";
+using CadlRdf;
+
+@rdfns("ex", "http://example.org/")
+namespace Resources;
+
+scalar Password extends string;

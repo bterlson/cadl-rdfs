@@ -44,6 +44,8 @@ import {
 import { NamedNode } from "rdf-js";
 import { createStateSymbol } from "./lib.js";
 
+import { emitFile } from "@cadl-lang/compiler";
+
 export function $onEmit(context: EmitContext) {
   const emitter = createRdfEmitter(context.program);
   emitter.emit();
@@ -434,10 +436,7 @@ function createRdfEmitter(program: Program) {
         .replace(/^<shapeClassMarker.*$/m, "\n# Shapes for Entities")
         .replace(/^<shapePropMarker.*$/m, "\n# Shapes for Properties");
 
-      program.host.writeFile(
-        path.join(program.compilerOptions.outputPath!, "models.ttl"),
-        result
-      );
+      emitFile(program, { path: "cadl-output/output.ttl", content: result });
     });
   }
 

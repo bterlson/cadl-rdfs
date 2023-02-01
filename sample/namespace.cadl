@@ -1,0 +1,27 @@
+import "cadl-rdf";
+import "./metadata.js";
+using CadlRdf;
+
+@rdfns("ex", "http://example.org/")
+
+namespace Core
+{
+    model Account
+    {
+        acoountID: int32;
+        acountName: string;
+        accountyType:string;
+    }
+}
+
+using Core;
+namespace Finance
+{
+    model MyFinanceAccount
+    {
+        ...Account;
+        extraFieldInFinance: string;
+    }
+}
+
+
