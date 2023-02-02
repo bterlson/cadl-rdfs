@@ -1,0 +1,39 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix skos: <http://www.w3.org/2004/02/skos/core#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#http>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+
+@prefix ex: <http://example.org/Resources/>.
+
+
+# Entities
+ex:Person a owl:Class;
+    rdfs:label "Person".
+ex:Colors a owl:Class;
+    rdfs:label "Colors".
+
+# Properties
+ex:name a owl:DatatypeProperty;
+    rdfs:label "name";
+    rdfs:range xsd:string.
+
+# Named Individual Definitions
+ex:RED a ex:Colors;
+    rdfs:label "RED".
+ex:GREEN a ex:Colors;
+    rdfs:label "GREEN".
+ex:BLUE a ex:Colors;
+    rdfs:label "BLUE".
+
+# Shapes for Entities
+ex:Person_NodeShape a sh:NodeShape;
+    rdfs:label "Shape for Person";
+    sh:targetClass ex:Person;
+    sh:property [
+  sh:path ex:name;
+  sh:datatype xsd:string
+].
+
+# Shapes for Properties

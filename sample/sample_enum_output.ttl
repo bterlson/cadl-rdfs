@@ -1,0 +1,42 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#>.
+@prefix skos: <http://www.w3.org/2004/02/skos/core#>.
+@prefix owl: <http://www.w3.org/2002/07/owl#http>.
+@prefix sh: <http://www.w3.org/ns/shacl#>.
+
+@prefix ex: <http://example.org/Resources/>.
+
+
+# Entities
+
+ex:ColorsCollection a owl:Class;
+    rdfs:label "Colors Collection";
+    rdfs:subclassOf skos:Collection,
+    [
+        a owl:Restriction ;
+        owl:onProperty skos:member;
+        owl:allValuesFrom ex:Color
+    ];
+    .
+
+ex:_ColorsCollection_12345332 a ex:ColorsCollection ;
+    skos:member ex:_Color_RED,
+                ex:_Color_GREEN,
+                ex:_Color_BLUE .
+            
+ex:Colors a owl:Class ;
+    rdfs:label "Colors" .
+
+# Named Individual Definitions
+
+ex:_Color_RED a ex:Color;
+    rdfs:label "RED" .
+
+ex:_Color_GREEN a ex:Color;
+    rdfs:label "GREEN" .
+
+ex:_Color_BLUE a ex:Color;
+    rdfs:label "BLUE" .
+
+

@@ -1,2 +1,1 @@
-emitters:
-  "cadl-rdf": true
+emit: ["cadl-rdf"]

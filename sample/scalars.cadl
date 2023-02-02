@@ -1,0 +1,11 @@
+import "cadl-rdf";
+using CadlRdf;
+
+@maxLength(10)
+@rdfns("ex", "http://example.org/")
+scalar ShortString extends string;
+
+// TODO: not sure what this should look like?
+@minLength(10)
+@rdfns("ex", "http://example.org/")
+scalar LongShortString extends ShortString;
